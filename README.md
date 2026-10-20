@@ -23,6 +23,10 @@ npm run dist     # package a macOS .app/.dmg into release/
 
 Open a file directly with `npm start -- path/to/file.md`.
 
+### Using an AI coding agent
+
+Agents can install, run and change Typewriter on their own. Point yours at this repo, for example *"Clone github.com/Ssurajbalii/typewriter, set it up and run it."* Setup, verification and architecture notes for agents are in [`AGENTS.md`](AGENTS.md), which Codex, Cursor, Copilot and Gemini CLI read automatically. Claude Code reads it through [`CLAUDE.md`](CLAUDE.md).
+
 ## Features
 
 - **Live preview**: headings, emphasis, strikethrough, `==highlight==`, inline code, links, images, blockquotes, lists and task lists (with clickable checkboxes), horizontal rules
