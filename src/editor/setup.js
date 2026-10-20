@@ -15,10 +15,11 @@ export const modes = {
 
 let baseExtensions = [];
 
-function makeState(doc, previous) {
+function makeState(doc, previous, selection) {
   const current = (name, fallback) => (previous ? modes[name].get(previous) : fallback);
   return EditorState.create({
     doc,
+    selection,
     extensions: [
       ...baseExtensions,
       modes.preview.of(current('preview', livePreview)),
@@ -58,7 +59,17 @@ export function setMode(view, name, on) {
   view.dispatch({ effects: modes[name].reconfigure(on ? ext : []) });
 }
 
-/** Load a different file: fresh state (so undo can't cross files), same modes. */
-export function replaceDocument(view, text) {
-  view.setState(makeState(text, view.state));
+/** A new editor state for another tab: own text, undo history and selection, current modes. */
+export function newTabState(view, text, selection) {
+  const len = text.length;
+  const clamp = (n) => Math.max(0, Math.min(len, n ?? 0));
+  const sel = selection ? { anchor: clamp(selection.anchor), head: clamp(selection.head) } : undefined;
+  return makeState(text, view.state, sel);
+}
+
+/** Switch the view to a stored tab state, applying the current modes to it. */
+export function showTabState(view, state) {
+  const effects = Object.entries(modes).map(([name, c]) => c.reconfigure(c.get(view.state)));
+  view.setState(state);
+  view.dispatch({ effects });
 }

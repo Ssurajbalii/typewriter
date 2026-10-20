@@ -6,13 +6,17 @@ const { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeTheme, protocol,
 const { pathToFileURL } = require('node:url');
 const os = require('node:os');
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
 const path = require('node:path');
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 const isMac = process.platform === 'darwin';
 const MD_FILE = /\.(md|markdown|mdown|txt)$/i;
 // Screenshot runs get a throwaway profile so they never touch the user's settings.
-if (process.env.TW_CAPTURE) app.setPath('userData', path.join(os.tmpdir(), `typewriter-capture-${process.pid}`));
+// TW_USER_DATA pins the profile instead, to test restoring a session across runs.
+if (process.env.TW_CAPTURE) {
+  app.setPath('userData', process.env.TW_USER_DATA || path.join(os.tmpdir(), `typewriter-capture-${process.pid}`));
+}
 const MD_FILTERS = [
   { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'txt'] },
   { name: 'All Files', extensions: ['*'] },
@@ -25,9 +29,8 @@ protocol.registerSchemesAsPrivileged([
 ]);
 const IMAGE_EXT = /\.(png|jpe?g|gif|svg|webp|avif|bmp|ico)$/i;
 
-/** @type {Map<number, { filePath: string | null, dirty: boolean }>} */
-const windowState = new Map();
 let pendingOpenPath = null;
+const SESSION_FILE = () => path.join(app.getPath('userData'), 'session.json');
 
 function overlayColors(dark) {
   return dark
@@ -35,13 +38,9 @@ function overlayColors(dark) {
     : { color: '#ffffff', symbolColor: '#2b2b2b', height: 38 };
 }
 
-/** Path shown by macOS in the title bar's proxy icon; no-op elsewhere. */
-function setDocumentPath(win, filePath) {
-  if (isMac) win.setRepresentedFilename(filePath);
-}
-
-function setEdited(win, edited) {
-  if (isMac) win.setDocumentEdited(edited);
+/** The window that receives opened files (one window holds all tabs). */
+function mainWindow() {
+  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
 }
 
 function createWindow(filePath = null) {
@@ -66,8 +65,6 @@ function createWindow(filePath = null) {
       spellcheck: true,
     },
   });
-
-  windowState.set(win.id, { filePath: null, dirty: false });
 
   if (isDev) win.loadURL(process.env.VITE_DEV_SERVER_URL);
   else win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
@@ -110,6 +107,7 @@ function createWindow(filePath = null) {
       app.exit(0);
     }, 2500));
   }
+  // The renderer queues opened files until its saved session is restored.
   win.webContents.once('did-finish-load', () => {
     if (filePath) openFileInWindow(win, filePath);
   });
@@ -120,50 +118,23 @@ function createWindow(filePath = null) {
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
-
-  win.on('close', (e) => {
-    const state = windowState.get(win.id);
-    if (!state?.dirty) return;
-    const choice = dialog.showMessageBoxSync(win, {
-      type: 'warning',
-      buttons: ['Save', "Don't Save", 'Cancel'],
-      defaultId: 0,
-      cancelId: 2,
-      message: `Do you want to save the changes to ${state.filePath ? path.basename(state.filePath) : 'Untitled'}?`,
-      detail: "Your changes will be lost if you don't save them.",
-    });
-    if (choice === 2) e.preventDefault();
-    else if (choice === 0) {
-      e.preventDefault();
-      win.webContents.send('menu', 'save-then-close');
-    }
-  });
-  win.on('closed', () => windowState.delete(win.id));
+  // No "save changes?" prompt: the renderer persists every tab (hot exit).
   return win;
 }
 
 async function openFileInWindow(win, filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
-    windowState.set(win.id, { filePath, dirty: false });
-    setDocumentPath(win, filePath);
     app.addRecentDocument(filePath);
     win.webContents.send('file-opened', { filePath, content });
+    win.focus();
   } catch (err) {
     dialog.showErrorBox('Could not open file', `${filePath}\n\n${err.message}`);
   }
 }
 
-/** Reuse the focused window if it is an empty, unmodified document. */
-function targetWindowFor() {
-  const win = BrowserWindow.getFocusedWindow();
-  const state = win && windowState.get(win.id);
-  if (win && state && !state.filePath && !state.dirty) return win;
-  return null;
-}
-
 async function openWithDialog() {
-  const parent = BrowserWindow.getFocusedWindow();
+  const parent = mainWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(parent, {
     properties: ['openFile', 'multiSelections'],
     filters: MD_FILTERS,
@@ -172,57 +143,115 @@ async function openWithDialog() {
   for (const p of filePaths) openPath(p);
 }
 
+/** Open a file as a tab in the main window (the renderer focuses it if already open). */
 function openPath(filePath) {
-  const existing = [...windowState.entries()].find(([, s]) => s.filePath === filePath);
-  if (existing) return BrowserWindow.fromId(existing[0])?.focus();
-  const win = targetWindowFor();
+  const win = mainWindow();
   if (win) openFileInWindow(win, filePath);
   else createWindow(filePath);
 }
 
 // ---- IPC ----------------------------------------------------------------
 
-ipcMain.handle('file:save', async (e, { content, saveAs }) => {
+ipcMain.handle('file:save', async (e, { content, path: filePath, suggestedName, saveAs }) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const state = windowState.get(win.id);
-  let filePath = state.filePath;
   if (!filePath || saveAs) {
     const result = await dialog.showSaveDialog(win, {
-      defaultPath: filePath ?? 'Untitled.md',
+      defaultPath: filePath ?? `${suggestedName || 'Untitled'}.md`,
       filters: MD_FILTERS,
     });
     if (result.canceled) return null;
     filePath = result.filePath;
   }
   await fs.writeFile(filePath, content, 'utf8');
-  windowState.set(win.id, { filePath, dirty: false });
-  setDocumentPath(win, filePath);
-  setEdited(win, false);
   app.addRecentDocument(filePath);
   return filePath;
 });
 
-ipcMain.on('file:dirty', (e, dirty) => {
+ipcMain.handle('file:read', async (_e, filePath) => fs.readFile(filePath, 'utf8').catch(() => null));
+
+/** Path shown by macOS in the title bar's proxy icon for the active tab. */
+ipcMain.on('tab:active', (e, { path: filePath, dirty }) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const state = windowState.get(win.id);
-  if (state) state.dirty = dirty;
-  setEdited(win, dirty);
+  if (!isMac || !win) return;
+  win.setRepresentedFilename(filePath ?? '');
+  win.setDocumentEdited(!!dirty);
 });
 
-ipcMain.on('window:close', (e) => {
+ipcMain.handle('tab:confirm-close', (e, name) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const state = windowState.get(win.id);
-  if (state) state.dirty = false;
-  win.close();
+  const choice = dialog.showMessageBoxSync(win, {
+    type: 'warning',
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    message: `Do you want to save the changes to ${name}?`,
+    detail: "Your changes will be lost if you don't save them.",
+  });
+  return ['save', 'discard', 'cancel'][choice];
 });
 
-// Sidebar file tree: replace the current document unless it has unsaved changes.
-ipcMain.handle('file:open-here', (e, p) => {
-  const win = BrowserWindow.fromWebContents(e.sender);
-  const existing = [...windowState.entries()].find(([, s]) => s.filePath === p);
-  if (existing) return BrowserWindow.fromId(existing[0])?.focus();
-  if (windowState.get(win.id)?.dirty) createWindow(p);
-  else openFileInWindow(win, p);
+// Session ("hot exit"), modelled on Notepad++: a small session.json lists the
+// tabs, and each unsaved buffer lives in its own file under backup/. Only
+// buffers whose text changed since the last snapshot are rewritten.
+const backupDir = () => path.join(app.getPath('userData'), 'backup');
+const backupFile = (id) => path.join(backupDir(), `${id.replace(/[^\w-]/g, '')}.md`);
+const lastWritten = new Map(); // tab id -> text last written to its backup
+
+function planSessionWrite(session) {
+  const writes = [];
+  const keep = new Set();
+  const meta = { ...session, tabs: session.tabs.map(({ content, ...t }) => {
+    if (content == null) return { ...t, backup: false };
+    keep.add(t.id);
+    if (lastWritten.get(t.id) !== content) writes.push([t.id, content]);
+    return { ...t, backup: true };
+  }) };
+  const stale = [...lastWritten.keys()].filter((id) => !keep.has(id));
+  return { json: JSON.stringify(meta), writes, stale };
+}
+
+async function saveSession(session) {
+  const { json, writes, stale } = planSessionWrite(session);
+  await fs.mkdir(backupDir(), { recursive: true });
+  for (const [id, content] of writes) {
+    await fs.writeFile(`${backupFile(id)}.tmp`, content, 'utf8');
+    await fs.rename(`${backupFile(id)}.tmp`, backupFile(id));
+    lastWritten.set(id, content);
+  }
+  await fs.writeFile(`${SESSION_FILE()}.tmp`, json, 'utf8');
+  await fs.rename(`${SESSION_FILE()}.tmp`, SESSION_FILE());
+  for (const id of stale) { lastWritten.delete(id); await fs.rm(backupFile(id), { force: true }); }
+}
+
+function saveSessionSync(session) {
+  const { json, writes, stale } = planSessionWrite(session);
+  fsSync.mkdirSync(backupDir(), { recursive: true });
+  for (const [id, content] of writes) {
+    fsSync.writeFileSync(`${backupFile(id)}.tmp`, content, 'utf8');
+    fsSync.renameSync(`${backupFile(id)}.tmp`, backupFile(id));
+    lastWritten.set(id, content);
+  }
+  fsSync.writeFileSync(`${SESSION_FILE()}.tmp`, json, 'utf8');
+  fsSync.renameSync(`${SESSION_FILE()}.tmp`, SESSION_FILE());
+  for (const id of stale) { lastWritten.delete(id); fsSync.rmSync(backupFile(id), { force: true }); }
+}
+
+ipcMain.handle('session:load', async () => {
+  let session;
+  try { session = JSON.parse(await fs.readFile(SESSION_FILE(), 'utf8')); } catch { return null; }
+  for (const t of session.tabs ?? []) {
+    if (!t.backup) { t.content = null; continue; }
+    t.content = await fs.readFile(backupFile(t.id), 'utf8').catch(() => null);
+    if (t.content != null) lastWritten.set(t.id, t.content);
+  }
+  return session;
+});
+// Snapshots run when typing pauses; one write at a time, newest wins.
+let saving = Promise.resolve();
+ipcMain.handle('session:save', (_e, session) => (saving = saving.then(() => saveSession(session)).catch(() => {})));
+// Used while the window closes, when an async reply could arrive too late.
+ipcMain.on('session:save-sync', (e, session) => {
+  try { saveSessionSync(session); e.returnValue = true; } catch { e.returnValue = false; }
 });
 
 ipcMain.handle('file:open-dialog', () => openWithDialog());
@@ -299,6 +328,13 @@ ipcMain.handle('theme:native', () => (nativeTheme.shouldUseDarkColors ? 'dark' :
 
 // ---- Menu ---------------------------------------------------------------
 
+/** New tab in the existing window, or a fresh window if none is open. */
+function newTab() {
+  const win = mainWindow();
+  if (win) win.webContents.send('menu', 'new-tab');
+  else createWindow();
+}
+
 function send(action) {
   return () => BrowserWindow.getFocusedWindow()?.webContents.send('menu', action);
 }
@@ -309,7 +345,8 @@ function buildMenu() {
     {
       label: 'File',
       submenu: [
-        { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => createWindow() },
+        { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: newTab },
+        { label: 'New', accelerator: 'CmdOrCtrl+N', click: newTab },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: openWithDialog },
         { label: 'Open Folder…', accelerator: 'CmdOrCtrl+Shift+O', click: send('open-folder') },
         ...(isMac ? [{ role: 'recentDocuments', submenu: [{ role: 'clearRecentDocuments' }] }] : []),
@@ -325,7 +362,8 @@ function buildMenu() {
           ],
         },
         { type: 'separator' },
-        { role: 'close' },
+        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: send('close-tab') },
+        { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
         ...(isMac ? [] : [{ role: 'quit', label: 'Exit' }]),
       ],
     },
@@ -395,7 +433,17 @@ function buildMenu() {
         label: t, click: send(`theme-${t.toLowerCase()}`),
       })),
     },
-    { role: 'windowMenu' },
+    {
+      role: 'windowMenu',
+      submenu: [
+        { label: 'Next Tab', accelerator: 'Ctrl+Tab', click: send('next-tab') },
+        { label: 'Previous Tab', accelerator: 'Ctrl+Shift+Tab', click: send('prev-tab') },
+        { type: 'separator' },
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac ? [{ type: 'separator' }, { role: 'front' }] : []),
+      ],
+    },
     ...(isMac ? [] : [{ role: 'help', submenu: [{ role: 'about' }] }]),
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

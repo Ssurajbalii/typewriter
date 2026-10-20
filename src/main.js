@@ -3,13 +3,14 @@ import './styles/themes.css';
 import './styles/app.css';
 import './styles/editor.css';
 
-import { createEditor, setMode, replaceDocument } from './editor/setup.js';
+import { createEditor, setMode, newTabState, showTabState } from './editor/setup.js';
 import { toggleInline, setHeading, toggleLinePrefix, insertBlock, insertLink, TABLE_TEMPLATE } from './editor/commands.js';
 import { setDocumentPath } from './editor/assets.js';
 import { Sidebar } from './ui/sidebar.js';
 import { renderExportHtml } from './export.js';
 import { openSearchPanel } from '@codemirror/search';
-import { basename, dirname, isAbsolute, join, relativeTo } from './paths.js';
+import { dirname, isAbsolute, join, relativeTo } from './paths.js';
+import { Tabs, planRestore } from './tabs.js';
 import welcome from './welcome.md?raw';
 
 const api = window.typewriter;
@@ -29,30 +30,59 @@ function localizeShortcuts(text) {
 document.querySelectorAll('[title]').forEach((el) => { el.title = localizeShortcuts(el.title); });
 const $ = (sel) => document.querySelector(sel);
 
-const doc = {
-  path: null,
-  saved: null, // Text snapshot at last save/open; dirty = doc differs from it
-  dirty: false,
-};
+// ---- Editor & tabs ------------------------------------------------------
 
-// ---- Editor -------------------------------------------------------------
-
-const firstRun = !localStorage.getItem('tw.seenWelcome');
 const view = createEditor($('#editor'), {
-  doc: firstRun ? localizeShortcuts(welcome) : '',
   onChange: () => {
-    const dirty = !view.state.doc.eq(doc.saved);
-    if (dirty !== doc.dirty) {
-      doc.dirty = dirty;
-      api.setDirty(dirty);
-      updateTitle();
-    }
+    refreshActiveTab();
+    scheduleSessionSave();
     scheduleUiUpdate();
   },
-  onSelection: () => scheduleUiUpdate(),
+  onSelection: () => {
+    scheduleSessionSave(); // cursor position is part of the session
+    scheduleUiUpdate();
+  },
 });
-doc.saved = view.state.doc;
-if (firstRun) localStorage.setItem('tw.seenWelcome', '1');
+
+const sidebar = new Sidebar($('#sidebar'), {
+  getView: () => view,
+  openFile: openFromTree,
+  getCurrentPath: () => activePath(),
+});
+
+const tabs = new Tabs({
+  view,
+  makeState: (text, selection) => newTabState(view, text, selection),
+  showState: (state) => {
+    // The folder must be known before rendering so relative images resolve.
+    setDocumentPath(tabs.active?.path ?? null);
+    showTabState(view, state);
+    view.dispatch({ selection: view.state.selection }); // rebuild previews for this folder
+  },
+  onSwitch: () => {
+    lastDirty = tabs.dirty(tabs.active);
+    updateTitle();
+    reportActiveTab();
+    sidebar.updateOutline(view.state);
+    sidebar.markCurrentFile();
+    updateStatus();
+    view.focus();
+  },
+  onListChange: () => renderTabs(),
+});
+
+const activePath = () => tabs.active?.path ?? null;
+
+let lastDirty = false;
+/** Re-render the tab bar only when the active tab's unsaved state flips. */
+function refreshActiveTab() {
+  const dirty = tabs.dirty(tabs.active);
+  if (dirty === lastDirty) return;
+  lastDirty = dirty;
+  renderTabs();
+  updateTitle();
+  reportActiveTab();
+}
 
 let uiTimer = null;
 function scheduleUiUpdate() {
@@ -63,19 +93,76 @@ function scheduleUiUpdate() {
   }, 120);
 }
 
+// ---- Tab bar -----------------------------------------------------------
+
+function renderTabs() {
+  const bar = $('#tabs');
+  bar.replaceChildren(...tabs.tabs.map((tab) => {
+    const el = document.createElement('div');
+    el.className = 'tab';
+    el.classList.toggle('active', tab.id === tabs.activeId);
+    el.classList.toggle('dirty', tabs.dirty(tab));
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', String(tab.id === tabs.activeId));
+    el.title = tab.path ?? tabs.title(tab);
+
+    const title = document.createElement('span');
+    title.className = 'tab-title';
+    title.textContent = tabs.title(tab);
+
+    const close = document.createElement('button');
+    close.className = 'tab-close';
+    close.setAttribute('aria-label', `Close ${tabs.title(tab)}`);
+    close.innerHTML = '<span>×</span>';
+    close.addEventListener('mousedown', (e) => e.stopPropagation());
+    close.addEventListener('click', () => closeTab(tab.id));
+
+    el.addEventListener('mousedown', (e) => { if (e.button === 0) tabs.activate(tab.id); });
+    el.addEventListener('auxclick', (e) => { if (e.button === 1) closeTab(tab.id); });
+    el.append(title, close);
+    return el;
+  }));
+  bar.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+// Double-clicking empty space in the tab bar opens a new tab, as in Notepad++.
+$('#tabs').addEventListener('dblclick', (e) => { if (e.target.id === 'tabs') newTab(); });
+$('#new-tab').addEventListener('click', () => newTab());
+
+function newTab() {
+  tabs.add();
+  scheduleSessionSave();
+}
+
+async function closeTab(id) {
+  const tab = tabs.tabs.find((t) => t.id === id);
+  if (!tab) return;
+  if (tabs.dirty(tab)) {
+    tabs.activate(id);
+    const choice = await api.confirmCloseTab(tabs.title(tab));
+    if (choice === 'cancel') return;
+    if (choice === 'save' && !(await save(false))) return;
+  }
+  tabs.remove(id);
+  scheduleSessionSave();
+}
+
 // ---- Title & status bar -------------------------------------------------
 
 function fileName() {
-  return doc.path ? basename(doc.path) : 'Untitled';
+  return tabs.active ? tabs.title(tabs.active) : 'Untitled';
 }
 
 function updateTitle() {
-  // Unsaved state shows natively as the dot in the window's close button.
-  $('#title').textContent = fileName();
-  document.title = `${fileName()}${doc.dirty ? ' — Edited' : ''}`;
+  document.title = `${fileName()}${lastDirty ? ' — Edited' : ''}`;
 }
 
-const CJK = /[぀-ヿ㐀-䶿一-鿿가-힯]/g;
+/** macOS shows the active file's proxy icon and the unsaved dot in the close button. */
+function reportActiveTab() {
+  api.setActiveTab({ path: activePath(), dirty: lastDirty });
+}
+
+const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]/g;
 function countWords(text) {
   const cjk = (text.match(CJK) || []).length;
   const latin = (text.replace(CJK, ' ').match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
@@ -95,39 +182,77 @@ function updateStatus() {
 
 // ---- Files --------------------------------------------------------------
 
-function loadFile(filePath, content) {
-  // The folder must be known before the first render so relative images resolve.
-  setDocumentPath(filePath);
-  replaceDocument(view, content);
-  doc.path = filePath;
-  doc.saved = view.state.doc;
-  doc.dirty = false;
-  updateTitle();
-  sidebar.updateOutline(view.state);
-  sidebar.markCurrentFile();
-  updateStatus();
-  view.focus();
-}
-
 async function save(saveAs = false) {
+  const tab = tabs.active;
   const text = view.state.doc;
-  const savedPath = await api.save(text.toString(), saveAs);
+  const savedPath = await api.save(text.toString(), { path: tab.path, suggestedName: tab.name, saveAs });
   if (!savedPath) return false;
-  doc.path = savedPath;
-  doc.saved = text;
-  doc.dirty = !view.state.doc.eq(text);
+  tabs.markSaved(savedPath, text);
   setDocumentPath(savedPath);
   view.dispatch({ selection: view.state.selection }); // re-resolve relative images
+  lastDirty = tabs.dirty(tab);
+  renderTabs();
   updateTitle();
+  reportActiveTab();
   sidebar.markCurrentFile();
+  scheduleSessionSave();
   return true;
 }
 
-api.onFileOpened(({ filePath, content }) => loadFile(filePath, content));
+/** Open a file as a tab; reuse its tab if open, and replace a blank starting tab. */
+function openFileTab({ filePath, content }) {
+  const existing = tabs.findByPath(filePath);
+  if (existing) return tabs.activate(existing.id);
+  const current = tabs.active;
+  const blank = current && !current.path && view.state.doc.length === 0 && tabs.tabs.length === 1;
+  tabs.add({ path: filePath, content, saved: content });
+  if (blank) tabs.remove(current.id);
+  scheduleSessionSave();
+}
+
+// Files opened before the session is restored wait their turn.
+let restored = false;
+const pendingFiles = [];
+api.onFileOpened((payload) => (restored ? openFileTab(payload) : pendingFiles.push(payload)));
 
 async function openFromTree(path) {
-  if (path === doc.path) return;
-  await api.openHere(path);
+  const existing = tabs.findByPath(path);
+  if (existing) tabs.activate(existing.id);
+  else await api.openPath(path);
+}
+
+// ---- Session (hot exit) --------------------------------------------------
+
+let sessionTimer = null;
+function scheduleSessionSave() {
+  if (!restored) return;
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => api.saveSession(tabs.snapshot()), 800);
+}
+
+// Closing the window or quitting never asks: every tab is written out first.
+window.addEventListener('beforeunload', () => {
+  if (restored) api.saveSessionSync(tabs.snapshot());
+});
+
+async function restoreSession() {
+  const session = await api.loadSession();
+  const paths = [...new Set((session?.tabs ?? []).map((t) => t.path).filter(Boolean))];
+  const disk = Object.fromEntries(await Promise.all(paths.map(async (p) => [p, await api.readFile(p)])));
+  const plan = planRestore(session, disk);
+  for (const t of plan) tabs.add(t, { activate: false });
+
+  if (!tabs.tabs.length) {
+    const firstRun = !localStorage.getItem('tw.seenWelcome');
+    const text = firstRun ? localizeShortcuts(welcome) : '';
+    tabs.add(firstRun ? { name: 'Welcome', content: text, saved: text } : {}, { activate: false });
+    localStorage.setItem('tw.seenWelcome', '1');
+  }
+  tabs.activate((plan.find((t) => t.active) ?? tabs.tabs[0]).id);
+
+  restored = true;
+  for (const f of pendingFiles.splice(0)) openFileTab(f);
+  scheduleSessionSave();
 }
 
 // ---- Modes & themes -----------------------------------------------------
@@ -182,7 +307,10 @@ async function exportAs(kind) {
 const actions = {
   save: () => save(false),
   'save-as': () => save(true),
-  'save-then-close': async () => { if (await save(false)) api.closeWindow(); },
+  'new-tab': () => newTab(),
+  'close-tab': () => closeTab(tabs.activeId),
+  'next-tab': () => tabs.cycle(1),
+  'prev-tab': () => tabs.cycle(-1),
   'open-folder': () => sidebar.chooseFolder(),
   'export-html': () => exportAs('html'),
   'export-pdf': () => exportAs('pdf'),
@@ -222,8 +350,8 @@ api.onMenu((action) => actions[action]?.());
 
 window.addEventListener('typewriter:open-link', ({ detail: url }) => {
   if (/^(https?:|mailto:)/i.test(url)) window.open(url);
-  else if (/\.(md|markdown)$/i.test(url) && doc.path) {
-    api.openPath(isAbsolute(url) ? url : join(dirname(doc.path), decodeURI(url)));
+  else if (/\.(md|markdown)$/i.test(url) && activePath()) {
+    api.openPath(isAbsolute(url) ? url : join(dirname(activePath()), decodeURI(url)));
   }
 });
 
@@ -240,7 +368,7 @@ document.addEventListener('drop', (e) => {
     if (!p) continue;
     if (/\.(md|markdown|mdown|txt)$/i.test(p)) api.openPath(p);
     else if (/\.(png|jpe?g|gif|svg|webp|avif|bmp)$/i.test(p)) {
-      const rel = doc.path ? relativeTo(dirname(doc.path), p) : p;
+      const rel = activePath() ? relativeTo(dirname(activePath()), p) : p;
       inserts.push(`![${file.name.replace(/\.\w+$/, '')}](${rel.includes(' ') ? `<${rel}>` : rel})`);
     }
   }
@@ -249,18 +377,10 @@ document.addEventListener('drop', (e) => {
 
 // ---- Boot ---------------------------------------------------------------
 
-const sidebar = new Sidebar($('#sidebar'), {
-  getView: () => view,
-  openFile: openFromTree,
-  getCurrentPath: () => doc.path,
-});
 sidebar.toggle(localStorage.getItem('tw.sidebar.v2') === '1'); // hidden unless the user opened it
 
 $('#toggle-sidebar').addEventListener('click', () => sidebar.toggle());
 
 applyTheme();
 applyModes();
-updateTitle();
-updateStatus();
-sidebar.updateOutline(view.state);
-view.focus();
+restoreSession();

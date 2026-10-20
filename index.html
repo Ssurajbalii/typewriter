@@ -8,7 +8,10 @@
 </head>
 <body>
   <header id="titlebar">
-    <span id="title">Untitled</span>
+    <div id="tabs" role="tablist" aria-label="Open documents"></div>
+    <button id="new-tab" title="New Tab (⌘T)" aria-label="New tab">
+      <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg>
+    </button>
   </header>
 
   <div id="workspace">
@@ -28,16 +31,15 @@
 
     <main id="editor-scroll">
       <div id="editor"></div>
+      <footer id="statusbar">
+        <button id="toggle-sidebar" title="Toggle Sidebar (⇧⌘L)" aria-label="Toggle sidebar">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11"/></svg>
+        </button>
+        <span class="spacer"></span>
+        <span id="word-count"></span>
+      </footer>
     </main>
   </div>
-
-  <footer id="statusbar">
-    <button id="toggle-sidebar" title="Toggle Sidebar (⇧⌘L)" aria-label="Toggle sidebar">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11"/></svg>
-    </button>
-    <span class="spacer"></span>
-    <span id="word-count"></span>
-  </footer>
 
   <script type="module" src="/src/main.js"></script>
 </body>

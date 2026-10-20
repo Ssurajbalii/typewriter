@@ -56,6 +56,7 @@ Agents can install, run and change Typewriter on their own. Point yours at this 
 
 ## Features
 
+- **Tabs that never lose work**: open as many documents as you like (⌘T new tab, ⌘W close, Ctrl+Tab switch). Like Notepad++, you never have to save. Every tab, including untitled drafts and unsaved edits, comes back exactly as you left it the next time you open the app, with the same text, cursor and scroll position.
 - **Live preview**: headings, emphasis, strikethrough, `==highlight==`, inline code, links, images, blockquotes, lists and task lists (with clickable checkboxes), horizontal rules
 - **Rich blocks**: KaTeX math (`$…$`, `$$…$$`), Mermaid diagrams, GFM tables and syntax-highlighted code fences. Click any of them to edit its source.
 - **Modes**: source code mode (⌘/), focus mode (F8), typewriter mode (F9)

@@ -4,7 +4,6 @@ name: Windows build
 
 on:
   push:
-    branches: [main, windows-support]
   workflow_dispatch:
 
 jobs:

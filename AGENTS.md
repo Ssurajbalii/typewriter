@@ -31,7 +31,7 @@ npm 11 may warn that some install scripts are "not yet covered by allowScripts".
 
 `npm test` covers the pure helpers. Verify UI changes with a build plus a screenshot (below).
 
-CI: `.github/workflows/windows.yml` runs on every push to `main`. On a Windows runner it runs the tests, captures screenshots, builds the installer, installs it silently, launches the installed app and screenshots the desktop. Check its `windows-screenshots` artifact after changing anything platform-specific.
+CI: `.github/workflows/windows.yml` runs on every push, on any branch. On a Windows runner it runs the tests, captures screenshots, builds the installer, installs it silently, launches the installed app and screenshots the desktop. Check its `windows-screenshots` artifact after changing anything platform-specific.
 
 ## Verifying UI changes without a human
 
@@ -69,7 +69,8 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 | Widgets | `src/editor/widgets.js` | Rendered stand-ins: math, tables, images, Mermaid, checkboxes, bullets |
 | Commands | `src/editor/commands.js` | Formatting commands that edit the Markdown text directly |
 | Editor setup | `src/editor/setup.js` | Extensions and compartments (`preview`, `focus`, `typewriter`) |
-| App controller | `src/main.js` | Wires menus, modes, themes, save/open, drag-and-drop |
+| App controller | `src/main.js` | Wires menus, modes, themes, tabs, save/open, drag-and-drop |
+| Tabs & session | `src/tabs.js` | One `EditorState` per tab (own undo history); pure `serializeSession` / `planRestore` are unit-tested |
 | Sidebar / export | `src/ui/sidebar.js`, `src/export.js` | Outline and file tree; standalone HTML (MathML math, inline SVG diagrams) |
 | Styles | `src/styles/` | `themes.css` holds variables only; `editor.css` styles the editor; `app.css` styles the chrome |
 
@@ -91,4 +92,6 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 - **Signing:** keep `mac.identity: "-"` (ad-hoc) and `hardenedRuntime: false`. Hardened runtime without JIT entitlements crashes Electron, and Apple Silicon refuses to launch unsigned apps.
 - **Cross-platform paths:** the renderer has no Node `path`. Use `src/paths.js` (`basename`, `dirname`, `join`, `isAbsolute`, `relativeTo`, `toFileUrl`) and never split on `/`. Guard macOS-only Electron APIs with `isMac` in `main.cjs`.
 - **Shortcut text:** write shortcuts with Mac glyphs (⌘⇧⌥) in UI strings. On Windows, `localizeShortcuts` in `src/main.js` rewrites them to Ctrl/Shift/Alt.
+- **Hot exit:** never add a "save changes?" prompt on window close or quit. The session is written by `main.cjs` to `userData/session.json`, plus one file per unsaved buffer in `userData/backup/` (the Notepad++ layout). Snapshots run 800 ms after typing pauses and synchronously on `beforeunload`. Only closing a single dirty tab asks to save. Use `TW_USER_DATA=/some/dir` with `TW_CAPTURE` to test restore across runs; set `TW_CAPTURE_HOLD_MS` ≥ 1000 so the debounced snapshot lands before the app exits.
+- **One window:** all documents open as tabs in a single window. Opened files go to `file-opened` and become (or focus) a tab.
 - **Generated files:** don't commit `dist/`, `release/` or `node_modules/`.
