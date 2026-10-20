@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-theme="paper" data-scheme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; img-src 'self' twfile: https: http: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' ws://localhost:*">
+  <title>Typewriter</title>
+</head>
+<body>
+  <header id="titlebar">
+    <span id="title">Untitled</span>
+  </header>
+
+  <div id="workspace">
+    <aside id="sidebar">
+      <nav class="tabs">
+        <button data-panel="outline">Outline</button>
+        <button data-panel="files">Files</button>
+      </nav>
+      <section id="outline" class="panel"></section>
+      <section id="files" class="panel">
+        <p class="empty">Open a folder to browse its Markdown files.</p>
+      </section>
+      <footer class="sidebar-footer">
+        <button id="open-folder" title="Open Folder (⇧⌘O)">Open Folder…</button>
+      </footer>
+    </aside>
+
+    <main id="editor-scroll">
+      <div id="editor"></div>
+    </main>
+  </div>
+
+  <footer id="statusbar">
+    <button id="toggle-sidebar" title="Toggle Sidebar (⇧⌘L)" aria-label="Toggle sidebar">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11"/></svg>
+    </button>
+    <span class="spacer"></span>
+    <span id="word-count"></span>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

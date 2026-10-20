@@ -1,0 +1,95 @@
+/* Themes are just variable sets. Add one by defining a new [data-theme]. */
+
+:root,
+[data-theme="paper"] {
+  --bg: #ffffff;
+  --chrome: #f7f7f5;
+  --chrome-border: #e6e6e3;
+  --text: #2b2b2b;
+  --muted: #8a8a8a;
+  --heading: #1f1f1f;
+  --accent: #2f6fde;
+  --quote: #6a6a6a;
+  --border: #dfdfdc;
+  --code-bg: #f5f5f3;
+  --highlight: #fff1a8;
+  --selection: #cfe1ff;
+  --syntax-mark: #b4b4b4;
+  --math: #8250df;
+  --caret: #2f6fde;
+  --font-body: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-heading: var(--font-body);
+  --font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-comment: #6e7781;
+  --code-function: #8250df;
+  --code-type: #953800;
+  --code-property: #116329;
+}
+
+[data-theme="night"] {
+  --bg: #1e1f22;
+  --chrome: #18191b;
+  --chrome-border: #2c2d31;
+  --text: #d7d7d4;
+  --muted: #8b8d93;
+  --heading: #f0f0ee;
+  --accent: #6ea8ff;
+  --quote: #a3a5aa;
+  --border: #3a3b40;
+  --code-bg: #26272b;
+  --highlight: #5c4e14;
+  --selection: #2f4a73;
+  --syntax-mark: #5d5f66;
+  --math: #c4a5ff;
+  --caret: #6ea8ff;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-comment: #8b949e;
+  --code-function: #d2a8ff;
+  --code-type: #ffa657;
+  --code-property: #7ee787;
+}
+
+[data-theme="newsprint"] {
+  --bg: #f5f2ea;
+  --chrome: #ece8de;
+  --chrome-border: #dcd6c8;
+  --text: #2e2a24;
+  --muted: #8c8576;
+  --heading: #1b1915;
+  --accent: #8c3b1f;
+  --quote: #6b6355;
+  --border: #d4ccbb;
+  --code-bg: #ebe6d9;
+  --highlight: #f3df8f;
+  --selection: #e3d6b6;
+  --syntax-mark: #b8ae99;
+  --math: #6b3fa0;
+  --caret: #8c3b1f;
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-heading: "Iowan Old Style", Georgia, serif;
+}
+
+[data-theme="sepia"] {
+  --bg: #f4ecd8;
+  --chrome: #ebe1c8;
+  --chrome-border: #d9cba8;
+  --text: #4a3b28;
+  --muted: #9a8665;
+  --heading: #3a2c1a;
+  --accent: #a0522d;
+  --quote: #7a6548;
+  --border: #d6c6a2;
+  --code-bg: #ebe0c4;
+  --highlight: #f1d77a;
+  --selection: #e0cc9d;
+  --syntax-mark: #bba57d;
+  --math: #7b4b94;
+  --caret: #a0522d;
+  --font-body: Charter, "Bitstream Charter", Georgia, serif;
+  --font-heading: var(--font-body);
+}
