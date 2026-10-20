@@ -23,7 +23,8 @@ npm 11 may warn that some install scripts are "not yet covered by allowScripts".
 | `npm run build` | Vite build of the renderer into `dist/`. It is the fastest correctness check. |
 | `npm start` | Build, then launch the app. Add `-- path/to/file.md` to open a file. |
 | `npm run dev` | Vite dev server + Electron with renderer hot reload. |
-| `npm run dist` | Package a macOS app with electron-builder (unsigned). |
+| `npm run dist` | Build an ad-hoc signed `release/Typewriter-<version>-arm64.dmg` (`dist:universal` for Intel + Apple Silicon). |
+| `npm run icon` | Redraw `build/icon.png` from `scripts/make-icon.cjs`. |
 | `npx electron scripts/frame-screenshots.cjs` | Rebuild the framed pitch images in `screenshots/pitch/` from `screenshots/raw/`. |
 
 There is no test suite yet. Verify changes with a build plus a screenshot (below).
@@ -81,4 +82,6 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 - **CSS specificity:** CodeMirror's base theme beats plain selectors. Prefix editor rules with `.cm-editor`. Never put margins on `.cm-line`, because they break CodeMirror's height measurement; use padding.
 - **Mermaid:** keep `htmlLabels: false`. HTML labels live in `foreignObject`, which DOMPurify strips.
 - **Clean room:** `vendor/` (gitignored) may contain a downloaded copy of Typora used only for study. Never copy code, CSS, themes or assets from it into this repo.
+- **Dependencies:** Vite bundles every library into the renderer, so they all belong in `devDependencies`. Anything in `dependencies` gets copied into the packaged app a second time.
+- **Signing:** keep `mac.identity: "-"` (ad-hoc) and `hardenedRuntime: false`. Hardened runtime without JIT entitlements crashes Electron, and Apple Silicon refuses to launch unsigned apps.
 - **Generated files:** don't commit `dist/`, `release/` or `node_modules/`.

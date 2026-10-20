@@ -18,10 +18,16 @@ git clone <this repo> && cd Typewriter
 npm install
 npm start        # build the renderer and launch the app
 npm run dev      # Vite dev server + Electron, with hot reload for the renderer
-npm run dist     # package a macOS .app/.dmg into release/
+npm run dist     # build release/Typewriter-<version>-arm64.dmg (Apple Silicon)
 ```
 
 Open a file directly with `npm start -- path/to/file.md`.
+
+### Installing as a Mac app
+
+`npm run dist` builds a DMG in `release/` (use `npm run dist:universal` for one that also runs on Intel Macs). Open it and drag **Typewriter** into **Applications**.
+
+The app is ad-hoc signed, so it needs no Apple Developer account. A DMG you build yourself opens normally. If you download one someone else built, macOS will say it's from an unidentified developer. Right-click the app, choose **Open**, then **Open** again; you only need to do this once.
 
 ### Using an AI coding agent
 
