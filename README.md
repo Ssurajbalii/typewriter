@@ -9,7 +9,11 @@ A seamless live-preview Markdown editor for macOS, inspired by Typora. There is 
 | ![Night theme with tasks, tables and code](screenshots/pitch/03-night.png) | ![Math and diagrams](screenshots/pitch/04-newsprint.png) |
 | ![Focus mode](screenshots/pitch/05-sepia-focus.png) | ![Source mode](screenshots/pitch/07-source.png) |
 
-## Run
+## Download
+
+Get the latest DMG from [Releases](https://github.com/Ssurajbalii/typewriter/releases/latest) (Apple Silicon Macs), then see [Installing as a Mac app](#installing-as-a-mac-app) for the one-time security step.
+
+## Run from source
 
 Requires macOS and [Node.js](https://nodejs.org) 22 or newer.
 
@@ -27,7 +31,13 @@ Open a file directly with `npm start -- path/to/file.md`.
 
 `npm run dist` builds a DMG in `release/` (use `npm run dist:universal` for one that also runs on Intel Macs). Open it and drag **Typewriter** into **Applications**.
 
-The app is ad-hoc signed, so it needs no Apple Developer account. A DMG you build yourself opens normally. If you download one someone else built, macOS will say it's from an unidentified developer. Right-click the app, choose **Open**, then **Open** again; you only need to do this once.
+The app is ad-hoc signed, so it needs no Apple Developer account. A DMG you build yourself opens normally. A downloaded one is blocked the first time, because it isn't notarized by Apple:
+
+1. Open Typewriter once. macOS says it can't verify the app; click **Done**.
+2. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to Typewriter.
+3. Confirm with **Open Anyway** again. From then on it opens normally.
+
+If macOS instead says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/Typewriter.app` in Terminal, then open it again.
 
 ### Using an AI coding agent
 
