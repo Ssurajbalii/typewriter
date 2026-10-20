@@ -1,6 +1,6 @@
 # Typewriter
 
-A seamless live-preview Markdown editor for macOS, inspired by Typora. There is no split preview: Markdown renders in place, and its syntax appears only where the caret is.
+A seamless live-preview Markdown editor for macOS and Windows, inspired by Typora. There is no split preview: Markdown renders in place, and its syntax appears only where the caret is.
 
 ![Typewriter](screenshots/pitch/01-paper.png)
 
@@ -11,11 +11,16 @@ A seamless live-preview Markdown editor for macOS, inspired by Typora. There is 
 
 ## Download
 
-Get the latest DMG from [Releases](https://github.com/Ssurajbalii/typewriter/releases/latest) (Apple Silicon Macs), then see [Installing as a Mac app](#installing-as-a-mac-app) for the one-time security step.
+Get the latest version from [Releases](https://github.com/Ssurajbalii/typewriter/releases/latest):
+
+- **Mac** (Apple Silicon): `Typewriter-<version>-arm64.dmg`. See [Installing as a Mac app](#installing-as-a-mac-app).
+- **Windows** (64-bit): `Typewriter-Setup-<version>-x64.exe`. See [Installing on Windows](#installing-on-windows).
+
+Both need a one-time security step the first time you open them, because the app isn't signed with a paid certificate.
 
 ## Run from source
 
-Requires macOS and [Node.js](https://nodejs.org) 22 or newer.
+Requires macOS or Windows and [Node.js](https://nodejs.org) 22 or newer.
 
 ```bash
 git clone <this repo> && cd Typewriter
@@ -38,6 +43,12 @@ The app is ad-hoc signed, so it needs no Apple Developer account. A DMG you buil
 3. Confirm with **Open Anyway** again. From then on it opens normally.
 
 If macOS instead says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/Typewriter.app` in Terminal, then open it again.
+
+### Installing on Windows
+
+`npm run dist:win` builds `release/Typewriter-Setup-<version>-x64.exe` (on Windows; building the installer on a Mac needs Rosetta). Run it and follow the installer.
+
+Windows SmartScreen shows **"Windows protected your PC"** the first time. Click **More info**, then **Run anyway**. You only need to do this once.
 
 ### Using an AI coding agent
 

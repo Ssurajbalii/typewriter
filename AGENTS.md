@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, Gemini CLI, …) working on Typewriter, a seamless live-preview Markdown editor for macOS built with Electron and CodeMirror 6. Humans should start with `README.md`.
+Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, Gemini CLI, …) working on Typewriter, a seamless live-preview Markdown editor for macOS and Windows built with Electron and CodeMirror 6. Humans should start with `README.md`.
 
 ## Setup
 
-Requirements: macOS, Node.js 22+ and npm. No other system dependencies.
+Requirements: macOS or Windows, Node.js 22+ and npm. No other system dependencies.
 
 ```bash
 git clone https://github.com/Ssurajbalii/typewriter.git
@@ -24,10 +24,14 @@ npm 11 may warn that some install scripts are "not yet covered by allowScripts".
 | `npm start` | Build, then launch the app. Add `-- path/to/file.md` to open a file. |
 | `npm run dev` | Vite dev server + Electron with renderer hot reload. |
 | `npm run dist` | Build an ad-hoc signed `release/Typewriter-<version>-arm64.dmg` (`dist:universal` for Intel + Apple Silicon). |
+| `npm run dist:win` | Build `release/Typewriter-Setup-<version>-x64.exe`. Run it on Windows: NSIS's macOS binary is Intel-only, so on Apple Silicon it needs Rosetta. |
+| `npm test` | Unit tests (`tests/**/*.test.mjs`, run with `node --test`). |
 | `npm run icon` | Redraw `build/icon.png` from `scripts/make-icon.cjs`. |
 | `npx electron scripts/frame-screenshots.cjs` | Rebuild the framed pitch images in `screenshots/pitch/` from `screenshots/raw/`. |
 
-There is no test suite yet. Verify changes with a build plus a screenshot (below).
+`npm test` covers the pure helpers. Verify UI changes with a build plus a screenshot (below).
+
+CI: `.github/workflows/windows.yml` runs on every push to `main`. On a Windows runner it runs the tests, captures screenshots, builds the installer, installs it silently, launches the installed app and screenshots the desktop. Check its `windows-screenshots` artifact after changing anything platform-specific.
 
 ## Verifying UI changes without a human
 
@@ -47,7 +51,8 @@ Optional variables, applied in this order:
 | `TW_CAPTURE_JS` | `document.querySelector('.cm-scroller').scrollTop=800` | JS run in the renderer |
 | `TW_CAPTURE_CLICK` | `450,300` | Left click at CSS pixel coordinates |
 | `TW_CAPTURE_TYPE` | `hello` | Types characters |
-| `TW_CAPTURE_KEYS` | `meta+Up,Down` | Key presses, modifiers joined with `+` |
+| `TW_CAPTURE_KEYS` | `meta+Up,Down` | Key presses, modifiers joined with `+` (use `control` on Windows) |
+| `TW_CAPTURE_HOLD_MS` | `6000` | Keep the window open after capturing, e.g. for an OS-level screenshot |
 
 Capture runs use a throwaway profile in the OS temp directory, so they never change the user's settings. Renderer console output is printed as `[renderer:<level>]`. Screenshots are at 2× scale, so divide image pixels by 2 to get click coordinates.
 
@@ -84,4 +89,6 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 - **Clean room:** `vendor/` (gitignored) may contain a downloaded copy of Typora used only for study. Never copy code, CSS, themes or assets from it into this repo.
 - **Dependencies:** Vite bundles every library into the renderer, so they all belong in `devDependencies`. Anything in `dependencies` gets copied into the packaged app a second time.
 - **Signing:** keep `mac.identity: "-"` (ad-hoc) and `hardenedRuntime: false`. Hardened runtime without JIT entitlements crashes Electron, and Apple Silicon refuses to launch unsigned apps.
+- **Cross-platform paths:** the renderer has no Node `path`. Use `src/paths.js` (`basename`, `dirname`, `join`, `isAbsolute`, `relativeTo`, `toFileUrl`) and never split on `/`. Guard macOS-only Electron APIs with `isMac` in `main.cjs`.
+- **Shortcut text:** write shortcuts with Mac glyphs (⌘⇧⌥) in UI strings. On Windows, `localizeShortcuts` in `src/main.js` rewrites them to Ctrl/Shift/Alt.
 - **Generated files:** don't commit `dist/`, `release/` or `node_modules/`.
