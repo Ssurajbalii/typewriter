@@ -65,6 +65,94 @@ Agents can install, run and change Typewriter on their own. Point yours at this 
 - **Export**: standalone HTML and PDF. Math is exported as MathML and diagrams as inline SVG.
 - Word/character count and reading time, find & replace, drag-and-drop files and images, recent documents, unsaved-changes prompts
 
+## Commands and shortcuts
+
+Every command is also in the menu bar. On Windows the menu bar is hidden until you press **Alt**.
+
+### Files and tabs
+
+| Command | Mac | Windows |
+| --- | --- | --- |
+| New tab | ⌘T or ⌘N | Ctrl+T or Ctrl+N |
+| Open file | ⌘O | Ctrl+O |
+| Open folder (sidebar file browser) | ⇧⌘O | Ctrl+Shift+O |
+| Save | ⌘S | Ctrl+S |
+| Save as | ⇧⌘S | Ctrl+Shift+S |
+| Close tab | ⌘W | Ctrl+W |
+| Close window | ⇧⌘W | Ctrl+Shift+W |
+| Next / previous tab | Ctrl+Tab / Ctrl+⇧Tab | Ctrl+Tab / Ctrl+Shift+Tab |
+| Export to HTML or PDF | File → Export | File → Export |
+
+You never have to save. Tabs, including unsaved drafts, are restored the next time you open the app.
+
+### Editing
+
+| Command | Mac | Windows |
+| --- | --- | --- |
+| Undo / redo | ⌘Z / ⇧⌘Z | Ctrl+Z / Ctrl+Y |
+| Cut / copy / paste | ⌘X / ⌘C / ⌘V | Ctrl+X / Ctrl+C / Ctrl+V |
+| Paste as plain text | ⇧⌘V | Ctrl+Shift+V |
+| Select all | ⌘A | Ctrl+A |
+| Find | ⌘F | Ctrl+F |
+| Find and replace | ⌥⌘F | Ctrl+Alt+F |
+| Indent / outdent | Tab / ⇧Tab | Tab / Shift+Tab |
+
+### Formatting
+
+| Command | Mac | Windows | Markdown |
+| --- | --- | --- | --- |
+| Bold | ⌘B | Ctrl+B | `**text**` |
+| Italic | ⌘I | Ctrl+I | `*text*` |
+| Inline code | ⇧⌘\` | Ctrl+Shift+\` | `` `code` `` |
+| Strikethrough | ⇧⌘X | Ctrl+Shift+X | `~~text~~` |
+| Highlight | ⇧⌘H | Ctrl+Shift+H | `==text==` |
+| Link | ⌘K | Ctrl+K | `[text](url)` |
+| Image | ⇧⌘I | Ctrl+Shift+I | `![alt](path)` |
+
+### Paragraphs and blocks
+
+| Command | Mac | Windows | Markdown |
+| --- | --- | --- | --- |
+| Heading 1–6 | ⌘1 – ⌘6 | Ctrl+1 – Ctrl+6 | `#` to `######` |
+| Plain paragraph | ⌘0 | Ctrl+0 | |
+| Quote | ⌥⌘Q | Ctrl+Alt+Q | `> text` |
+| Bullet list | ⌥⌘U | Ctrl+Alt+U | `- item` |
+| Numbered list | ⌥⌘O | Ctrl+Alt+O | `1. item` |
+| Task list | ⌥⌘X | Ctrl+Alt+X | `- [ ] task` |
+| Code block | ⌥⌘C | Ctrl+Alt+C | ` ``` ` |
+| Math block | ⌥⌘B | Ctrl+Alt+B | `$$ … $$` |
+| Table | ⌥⌘T | Ctrl+Alt+T | `\| a \| b \|` |
+| Horizontal rule | Paragraph menu | Paragraph menu | `---` |
+
+Press **Enter** at the end of a list item to continue the list, or on an empty item to end it.
+
+### View
+
+| Command | Mac | Windows |
+| --- | --- | --- |
+| Source code mode (raw Markdown) | ⌘/ | Ctrl+/ |
+| Focus mode (dim all but the current paragraph) | F8 | F8 |
+| Typewriter mode (keep the current line centred) | F9 | F9 |
+| Show / hide sidebar | ⇧⌘L | Ctrl+Shift+L |
+| Outline / files in sidebar | ⇧⌘1 / ⇧⌘2 | Ctrl+Shift+1 / Ctrl+Shift+2 |
+| Zoom in / out | ⌘+ / ⌘− | Ctrl++ / Ctrl+− |
+| Actual size | View menu | View menu |
+| Full screen | ⌃⌘F | F11 |
+| Theme (Paper, Night, Newsprint, Sepia) | Themes menu | Themes menu |
+
+### Mouse
+
+| Action | Result |
+| --- | --- |
+| Click formatted text, a table, an equation or a diagram | Shows its Markdown so you can edit it |
+| Click a checkbox | Ticks or unticks the task |
+| ⌘-click (Mac) / Ctrl+click (Windows) a link | Opens it in your browser, or opens a linked `.md` file as a tab |
+| Double-click empty space in the tab bar | New tab |
+| Middle-click a tab | Close it |
+| Drag a `.md` file onto the window | Opens it in a tab |
+| Drag an image onto the document | Inserts it as an image link |
+| Move the pointer to the bottom of the window | Shows the word count and sidebar button |
+
 ## Architecture
 
 | Layer | Files |
