@@ -1,7 +1,7 @@
 {
   "name": "typewriter",
   "productName": "Typewriter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A seamless live-preview Markdown editor.",
   "main": "electron/main.cjs",
   "type": "module",
