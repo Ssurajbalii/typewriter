@@ -1,0 +1,94 @@
+# Builds the Windows installer on a real Windows machine, installs it silently,
+# launches the installed app and uploads screenshots + the installer as artifacts.
+name: Windows build
+
+on:
+  push:
+    branches: [main, windows-support]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CAPTURE_DOC: ${{ github.workspace }}\tests\fixtures\showcase.md
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          node node_modules/electron/install.js
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build renderer
+        run: npm run build
+
+      - name: Screenshots from the dev build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          $shots = @(
+            @{ name = 'paper';   actions = 'theme-paper';               keys = 'control+End' },
+            @{ name = 'night';   actions = 'theme-night';               keys = 'control+End' },
+            @{ name = 'outline'; actions = 'theme-paper,show-outline';  keys = 'control+End' },
+            @{ name = 'source';  actions = 'theme-night,toggle-source'; keys = 'control+Home' }
+          )
+          foreach ($s in $shots) {
+            $env:TW_CAPTURE = "$pwd\out\$($s.name).png"
+            $env:TW_CAPTURE_SIZE = '1280,820'
+            $env:TW_CAPTURE_ACTIONS = $s.actions
+            $env:TW_CAPTURE_KEYS = $s.keys
+            npx electron . "$env:CAPTURE_DOC"
+            if (-not (Test-Path $env:TW_CAPTURE)) { throw "screenshot $($s.name) was not written" }
+          }
+
+      - name: Build installer
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Install silently, launch the installed app, screenshot the desktop
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem release\*.exe | Select-Object -First 1
+          Write-Host "Installer: $($setup.Name) ($([math]::Round($setup.Length / 1MB)) MB)"
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter Typewriter.exe | Select-Object -First 1
+          if (-not $app) { throw 'Typewriter.exe not found after install' }
+          Write-Host "Installed to $($app.FullName)"
+
+          $env:TW_CAPTURE = "$pwd\out\installed.png"
+          $env:TW_CAPTURE_SIZE = '1000,680'
+          $env:TW_CAPTURE_ACTIONS = 'theme-paper'
+          $env:TW_CAPTURE_KEYS = 'control+End'
+          $env:TW_CAPTURE_HOLD_MS = '6000'
+          $proc = Start-Process $app.FullName -ArgumentList "`"$env:CAPTURE_DOC`"" -PassThru
+
+          # Wait for the in-app capture, then grab the whole screen so the
+          # native Windows caption buttons (drawn outside the page) are visible.
+          for ($i = 0; $i -lt 60 -and -not (Test-Path $env:TW_CAPTURE); $i++) { Start-Sleep -Milliseconds 500 }
+          if (-not (Test-Path $env:TW_CAPTURE)) { throw 'installed app did not render' }
+          Start-Sleep -Seconds 1
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$pwd\out\desktop.png")
+          $proc.WaitForExit(15000) | Out-Null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-screenshots
+          path: out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: release/*.exe

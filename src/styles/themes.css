@@ -17,9 +17,9 @@
   --syntax-mark: #b4b4b4;
   --math: #8250df;
   --caret: #2f6fde;
-  --font-body: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI Variable Text", "Segoe UI", sans-serif;
   --font-heading: var(--font-body);
-  --font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "SF Mono", Menlo, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
   --code-keyword: #cf222e;
   --code-string: #0a3069;
   --code-number: #0550ae;
@@ -70,8 +70,8 @@
   --syntax-mark: #b8ae99;
   --math: #6b3fa0;
   --caret: #8c3b1f;
-  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --font-heading: "Iowan Old Style", Georgia, serif;
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-heading: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 
 [data-theme="sepia"] {
@@ -90,6 +90,6 @@
   --syntax-mark: #bba57d;
   --math: #7b4b94;
   --caret: #a0522d;
-  --font-body: Charter, "Bitstream Charter", Georgia, serif;
+  --font-body: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
   --font-heading: var(--font-body);
 }

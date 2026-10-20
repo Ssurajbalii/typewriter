@@ -2,6 +2,7 @@
 
 import { syntaxTree } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
+import { basename } from '../paths.js';
 
 export function headingsOf(state) {
   const out = [];
@@ -104,7 +105,7 @@ export class Sidebar {
     const tree = await window.typewriter.listFolder(dir);
     const header = document.createElement('div');
     header.className = 'folder-name';
-    header.textContent = dir.split('/').pop();
+    header.textContent = basename(dir);
     header.title = dir;
     const list = document.createElement('div');
     list.className = 'tree';

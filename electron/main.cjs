@@ -9,6 +9,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
+const isMac = process.platform === 'darwin';
+const MD_FILE = /\.(md|markdown|mdown|txt)$/i;
 // Screenshot runs get a throwaway profile so they never touch the user's settings.
 if (process.env.TW_CAPTURE) app.setPath('userData', path.join(os.tmpdir(), `typewriter-capture-${process.pid}`));
 const MD_FILTERS = [
@@ -27,14 +29,33 @@ const IMAGE_EXT = /\.(png|jpe?g|gif|svg|webp|avif|bmp|ico)$/i;
 const windowState = new Map();
 let pendingOpenPath = null;
 
+function overlayColors(dark) {
+  return dark
+    ? { color: '#1e1f22', symbolColor: '#d7d7d4', height: 38 }
+    : { color: '#ffffff', symbolColor: '#2b2b2b', height: 38 };
+}
+
+/** Path shown by macOS in the title bar's proxy icon; no-op elsewhere. */
+function setDocumentPath(win, filePath) {
+  if (isMac) win.setRepresentedFilename(filePath);
+}
+
+function setEdited(win, edited) {
+  if (isMac) win.setDocumentEdited(edited);
+}
+
 function createWindow(filePath = null) {
   const win = new BrowserWindow({
     width: 1100,
     height: 760,
     minWidth: 480,
     minHeight: 320,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 14, y: 14 },
+    // Frameless look on both platforms: macOS keeps its traffic lights inset;
+    // Windows gets native min/max/close drawn over the page (titleBarOverlay).
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 14 } }
+      : { titleBarStyle: 'hidden', titleBarOverlay: overlayColors(nativeTheme.shouldUseDarkColors), autoHideMenuBar: true }),
+    icon: isMac ? undefined : path.join(__dirname, '..', 'build', 'icon.png'),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1f22' : '#ffffff',
     show: false,
     webPreferences: {
@@ -84,6 +105,8 @@ function createWindow(filePath = null) {
       await new Promise((r) => setTimeout(r, 800));
       const image = await win.webContents.capturePage();
       await fs.writeFile(process.env.TW_CAPTURE, image.toPNG());
+      // TW_CAPTURE_HOLD_MS keeps the window open afterwards, e.g. for an OS-level screenshot.
+      await new Promise((r) => setTimeout(r, Number(process.env.TW_CAPTURE_HOLD_MS) || 0));
       app.exit(0);
     }, 2500));
   }
@@ -123,7 +146,7 @@ async function openFileInWindow(win, filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
     windowState.set(win.id, { filePath, dirty: false });
-    win.setRepresentedFilename(filePath);
+    setDocumentPath(win, filePath);
     app.addRecentDocument(filePath);
     win.webContents.send('file-opened', { filePath, content });
   } catch (err) {
@@ -173,8 +196,8 @@ ipcMain.handle('file:save', async (e, { content, saveAs }) => {
   }
   await fs.writeFile(filePath, content, 'utf8');
   windowState.set(win.id, { filePath, dirty: false });
-  win.setRepresentedFilename(filePath);
-  win.setDocumentEdited(false);
+  setDocumentPath(win, filePath);
+  setEdited(win, false);
   app.addRecentDocument(filePath);
   return filePath;
 });
@@ -183,7 +206,7 @@ ipcMain.on('file:dirty', (e, dirty) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   const state = windowState.get(win.id);
   if (state) state.dirty = dirty;
-  win.setDocumentEdited(dirty);
+  setEdited(win, dirty);
 });
 
 ipcMain.on('window:close', (e) => {
@@ -266,6 +289,12 @@ ipcMain.handle('export:pdf', async (e, { html, suggestedName }) => {
   return filePath;
 });
 
+// Windows: recolour the caption buttons to match the current theme.
+ipcMain.on('theme:changed', (e, { bg, fg }) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!isMac && win) win.setTitleBarOverlay({ color: bg, symbolColor: fg, height: 38 });
+});
+
 ipcMain.handle('theme:native', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'));
 
 // ---- Menu ---------------------------------------------------------------
@@ -276,14 +305,14 @@ function send(action) {
 
 function buildMenu() {
   const template = [
-    { role: 'appMenu' },
+    ...(isMac ? [{ role: 'appMenu' }] : []),
     {
       label: 'File',
       submenu: [
         { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => createWindow() },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: openWithDialog },
         { label: 'Open Folder…', accelerator: 'CmdOrCtrl+Shift+O', click: send('open-folder') },
-        { role: 'recentDocuments', submenu: [{ role: 'clearRecentDocuments' }] },
+        ...(isMac ? [{ role: 'recentDocuments', submenu: [{ role: 'clearRecentDocuments' }] }] : []),
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: send('save') },
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: send('save-as') },
@@ -297,6 +326,7 @@ function buildMenu() {
         },
         { type: 'separator' },
         { role: 'close' },
+        ...(isMac ? [] : [{ role: 'quit', label: 'Exit' }]),
       ],
     },
     {
@@ -366,6 +396,7 @@ function buildMenu() {
       })),
     },
     { role: 'windowMenu' },
+    ...(isMac ? [] : [{ role: 'help', submenu: [{ role: 'about' }] }]),
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -378,20 +409,34 @@ app.on('open-file', (e, filePath) => {
   else pendingOpenPath = filePath;
 });
 
+const fileFromArgv = (argv) => {
+  const f = argv.slice(1).find((a) => MD_FILE.test(a) && !a.startsWith('-'));
+  return f ? path.resolve(f) : null;
+};
+
+// One process for all windows: double-clicking another .md file on Windows
+// starts a second instance, which hands its file to us and exits.
+if (!isMac && !process.env.TW_CAPTURE && !app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', (_e, argv) => {
+  const file = fileFromArgv(argv);
+  if (file) openPath(file);
+  else BrowserWindow.getAllWindows()[0]?.focus();
+});
+
 app.whenReady().then(() => {
   protocol.handle('twfile', (req) => {
-    const filePath = decodeURIComponent(new URL(req.url).pathname);
+    let filePath = decodeURIComponent(new URL(req.url).pathname);
+    if (/^\/[A-Za-z]:\//.test(filePath)) filePath = filePath.slice(1); // Windows drive letter
     if (!IMAGE_EXT.test(filePath)) return new Response('Forbidden', { status: 403 });
     return net.fetch(pathToFileURL(filePath).toString());
   });
   buildMenu();
-  const argFile = process.argv.slice(isDev ? 2 : 1).find((a) => /\.(md|markdown|mdown|txt)$/i.test(a));
-  createWindow(pendingOpenPath ?? (argFile ? path.resolve(argFile) : null));
+  createWindow(pendingOpenPath ?? fileFromArgv(process.argv));
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (!isMac) app.quit();
 });

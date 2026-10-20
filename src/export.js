@@ -5,6 +5,7 @@ import { Marked } from 'marked';
 import katex from 'katex';
 import { renderMermaid } from './editor/mermaid.js';
 import { getDocumentDir } from './editor/assets.js';
+import { isAbsolute, join, toFileUrl } from './paths.js';
 
 const katexOpts = (displayMode) => ({ displayMode, output: 'mathml', throwOnError: false });
 const startAt = (i) => (i >= 0 ? i : undefined);
@@ -59,8 +60,10 @@ function createMarked({ absoluteImages }) {
       image(token) {
         let src = token.href;
         const dir = getDocumentDir();
-        if (absoluteImages && dir && !/^([a-z]+:|\/)/i.test(src)) src = `file://${dir}/${src.replace(/^\.\//, '')}`;
-        else if (absoluteImages && src.startsWith('/')) src = `file://${src}`;
+        if (absoluteImages && !/^[a-z]{2,}:/i.test(src)) {
+          if (isAbsolute(src)) src = toFileUrl(src);
+          else if (dir) src = toFileUrl(join(dir, src));
+        }
         const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
         return `<img src="${escapeHtml(src)}" alt="${escapeHtml(token.text)}"${title}>`;
       },

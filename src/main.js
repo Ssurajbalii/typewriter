@@ -9,9 +9,24 @@ import { setDocumentPath } from './editor/assets.js';
 import { Sidebar } from './ui/sidebar.js';
 import { renderExportHtml } from './export.js';
 import { openSearchPanel } from '@codemirror/search';
+import { basename, dirname, isAbsolute, join, relativeTo } from './paths.js';
 import welcome from './welcome.md?raw';
 
 const api = window.typewriter;
+const isMac = api.platform === 'darwin';
+document.body.classList.add(`platform-${api.platform}`);
+
+/** Mac shortcut glyphs to Windows/Linux wording: "⇧⌘L" -> "Ctrl+Shift+L". */
+function localizeShortcuts(text) {
+  if (isMac) return text;
+  return text.replace(/⌘-click/g, 'Ctrl+click').replace(/([⌃⌥⇧⌘]+)(\S)/g, (_, mods, key) => {
+    const names = { '⌃': 'Ctrl', '⌘': 'Ctrl', '⌥': 'Alt', '⇧': 'Shift' };
+    const order = ['⌃', '⌘', '⌥', '⇧'];
+    const parts = [...new Set(order.filter((m) => mods.includes(m)).map((m) => names[m]))];
+    return [...parts, key].join('+');
+  });
+}
+document.querySelectorAll('[title]').forEach((el) => { el.title = localizeShortcuts(el.title); });
 const $ = (sel) => document.querySelector(sel);
 
 const doc = {
@@ -24,7 +39,7 @@ const doc = {
 
 const firstRun = !localStorage.getItem('tw.seenWelcome');
 const view = createEditor($('#editor'), {
-  doc: firstRun ? welcome : '',
+  doc: firstRun ? localizeShortcuts(welcome) : '',
   onChange: () => {
     const dirty = !view.state.doc.eq(doc.saved);
     if (dirty !== doc.dirty) {
@@ -51,7 +66,7 @@ function scheduleUiUpdate() {
 // ---- Title & status bar -------------------------------------------------
 
 function fileName() {
-  return doc.path ? doc.path.split('/').pop() : 'Untitled';
+  return doc.path ? basename(doc.path) : 'Untitled';
 }
 
 function updateTitle() {
@@ -146,6 +161,9 @@ function applyTheme(theme = localStorage.getItem('tw.theme')) {
   document.documentElement.dataset.scheme = DARK_THEMES.has(effective) ? 'dark' : 'light';
   // Re-render diagrams with the matching palette.
   view.dispatch({ selection: view.state.selection });
+  // Windows draws its caption buttons natively; keep them on the theme's colours.
+  const cs = getComputedStyle(document.documentElement);
+  api.themeChanged({ bg: cs.getPropertyValue('--bg').trim(), fg: cs.getPropertyValue('--text').trim() });
 }
 
 systemDark.addEventListener('change', () => applyTheme());
@@ -203,8 +221,7 @@ api.onMenu((action) => actions[action]?.());
 window.addEventListener('typewriter:open-link', ({ detail: url }) => {
   if (/^(https?:|mailto:)/i.test(url)) window.open(url);
   else if (/\.(md|markdown)$/i.test(url) && doc.path) {
-    const dir = doc.path.replace(/\/[^/]*$/, '');
-    api.openPath(url.startsWith('/') ? url : `${dir}/${url}`);
+    api.openPath(isAbsolute(url) ? url : join(dirname(doc.path), decodeURI(url)));
   }
 });
 
@@ -221,8 +238,7 @@ document.addEventListener('drop', (e) => {
     if (!p) continue;
     if (/\.(md|markdown|mdown|txt)$/i.test(p)) api.openPath(p);
     else if (/\.(png|jpe?g|gif|svg|webp|avif|bmp)$/i.test(p)) {
-      const dir = doc.path?.replace(/\/[^/]*$/, '');
-      const rel = dir && p.startsWith(dir + '/') ? p.slice(dir.length + 1) : p;
+      const rel = doc.path ? relativeTo(dirname(doc.path), p) : p;
       inserts.push(`![${file.name.replace(/\.\w+$/, '')}](${rel.includes(' ') ? `<${rel}>` : rel})`);
     }
   }

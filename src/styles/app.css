@@ -38,6 +38,10 @@ button {
 }
 #title { color: var(--muted); font-weight: 500; }
 
+/* Windows: native caption buttons occupy the top-right corner (titleBarOverlay). */
+.platform-win32 #titlebar { padding-right: 140px; padding-left: 140px; font-size: 12px; }
+.platform-win32 #title { font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; }
+
 /* ---- Workspace ---- */
 
 #workspace {

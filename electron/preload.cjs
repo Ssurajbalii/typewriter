@@ -2,6 +2,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('typewriter', {
+  platform: process.platform,
   save: (content, saveAs = false) => ipcRenderer.invoke('file:save', { content, saveAs }),
   setDirty: (dirty) => ipcRenderer.send('file:dirty', dirty),
   closeWindow: () => ipcRenderer.send('window:close'),
@@ -14,6 +15,7 @@ contextBridge.exposeInMainWorld('typewriter', {
   exportHtml: (html, suggestedName) => ipcRenderer.invoke('export:html', { html, suggestedName }),
   exportPdf: (html, suggestedName) => ipcRenderer.invoke('export:pdf', { html, suggestedName }),
   nativeTheme: () => ipcRenderer.invoke('theme:native'),
+  themeChanged: (colors) => ipcRenderer.send('theme:changed', colors),
   onFileOpened: (cb) => ipcRenderer.on('file-opened', (_e, payload) => cb(payload)),
   onMenu: (cb) => ipcRenderer.on('menu', (_e, action) => cb(action)),
 });
