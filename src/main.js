@@ -96,11 +96,12 @@ function updateStatus() {
 // ---- Files --------------------------------------------------------------
 
 function loadFile(filePath, content) {
+  // The folder must be known before the first render so relative images resolve.
+  setDocumentPath(filePath);
   replaceDocument(view, content);
   doc.path = filePath;
   doc.saved = view.state.doc;
   doc.dirty = false;
-  setDocumentPath(filePath);
   updateTitle();
   sidebar.updateOutline(view.state);
   sidebar.markCurrentFile();
@@ -116,6 +117,7 @@ async function save(saveAs = false) {
   doc.saved = text;
   doc.dirty = !view.state.doc.eq(text);
   setDocumentPath(savedPath);
+  view.dispatch({ selection: view.state.selection }); // re-resolve relative images
   updateTitle();
   sidebar.markCurrentFile();
   return true;

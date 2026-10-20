@@ -58,13 +58,20 @@ export class HrWidget extends WidgetType {
 }
 
 export class ImageWidget extends WidgetType {
-  constructor(src, alt, pos) { super(); this.src = src; this.alt = alt; this.pos = pos; }
-  eq(other) { return other.src === this.src && other.alt === this.alt && other.pos === this.pos; }
+  constructor(src, alt, pos) {
+    super();
+    this.src = src;
+    this.alt = alt;
+    this.pos = pos;
+    // Resolved now, so moving the document to another folder yields a new widget.
+    this.url = resolveAssetUrl(src);
+  }
+  eq(other) { return other.url === this.url && other.alt === this.alt && other.pos === this.pos; }
   toDOM(view) {
     const wrap = document.createElement('span');
     wrap.className = 'cm-image';
     const img = document.createElement('img');
-    img.src = resolveAssetUrl(this.src);
+    img.src = this.url;
     img.alt = this.alt;
     img.title = this.src;
     img.addEventListener('load', () => view.requestMeasure());
