@@ -67,6 +67,7 @@ button {
 }
 .tab:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
 .tab.active { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+.tab.dragging { opacity: 0.4; }
 .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .tab-close {
   -webkit-app-region: no-drag;

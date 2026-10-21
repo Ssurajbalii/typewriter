@@ -2,7 +2,7 @@
 // The renderer never touches the filesystem directly; every disk operation
 // goes through the IPC handlers below (exposed via preload.cjs).
 
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeTheme, protocol, net } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell, clipboard, nativeTheme, protocol, net } = require('electron');
 const { pathToFileURL } = require('node:url');
 const os = require('node:os');
 const fs = require('node:fs/promises');
@@ -12,6 +12,11 @@ const path = require('node:path');
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 const isMac = process.platform === 'darwin';
 const MD_FILE = /\.(md|markdown|mdown|txt)$/i;
+// Theme ids must match [data-theme] blocks in src/styles/themes.css.
+const THEMES = [
+  ['paper', 'Paper'], ['github', 'GitHub'], ['newsprint', 'Newsprint'], ['night', 'Night'],
+  ['pixyll', 'Pixyll'], ['whitey', 'Whitey'], ['gothic', 'Gothic'], ['sepia', 'Sepia'],
+];
 // Screenshot runs get a throwaway profile so they never touch the user's settings.
 // TW_USER_DATA pins the profile instead, to test restoring a session across runs.
 if (process.env.TW_CAPTURE) {
@@ -79,6 +84,7 @@ function createWindow(filePath = null) {
       if (process.env.TW_CAPTURE_SIZE) win.setContentSize(...process.env.TW_CAPTURE_SIZE.split(',').map(Number));
       for (const action of (process.env.TW_CAPTURE_ACTIONS ?? '').split(',').filter(Boolean)) {
         win.webContents.send('menu', action);
+        await new Promise((r) => setTimeout(r, 300)); // like a person: one action at a time
       }
       await new Promise((r) => setTimeout(r, 500));
       if (process.env.TW_CAPTURE_JS) await win.webContents.executeJavaScript(process.env.TW_CAPTURE_JS);
@@ -319,10 +325,42 @@ ipcMain.handle('export:pdf', async (e, { html, suggestedName }) => {
 });
 
 // Windows: recolour the caption buttons to match the current theme.
-ipcMain.on('theme:changed', (e, { bg, fg }) => {
+ipcMain.on('theme:changed', (e, { bg, fg, name }) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!isMac && win) win.setTitleBarOverlay({ color: bg, symbolColor: fg, height: 38 });
+  const item = Menu.getApplicationMenu()?.getMenuItemById(`theme-${name}`);
+  if (item) item.checked = true;
 });
+
+// Right-click menu on a tab (Notepad++-style). Resolves with the chosen action.
+ipcMain.handle('tab:menu', (e, { path: filePath, index, count, hasSaved, canReopen }) => new Promise((resolve) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  let done = false;
+  const pick = (action) => () => { done = true; resolve(action); };
+  const menu = Menu.buildFromTemplate([
+    { label: 'Close', click: pick('close') },
+    { label: 'Close Others', enabled: count > 1, click: pick('others') },
+    { label: 'Close Tabs to the Left', enabled: index > 0, click: pick('left') },
+    { label: 'Close Tabs to the Right', enabled: index < count - 1, click: pick('right') },
+    { label: 'Close Saved Tabs', enabled: hasSaved, click: pick('saved') },
+    { label: 'Close All', click: pick('all') },
+    { type: 'separator' },
+    {
+      label: 'Copy File Path',
+      enabled: !!filePath,
+      click: () => { clipboard.writeText(filePath); pick(null)(); },
+    },
+    {
+      label: isMac ? 'Reveal in Finder' : 'Show in Explorer',
+      enabled: !!filePath,
+      click: () => { shell.showItemInFolder(filePath); pick(null)(); },
+    },
+    { type: 'separator' },
+    { label: 'Reopen Closed Tab', enabled: canReopen, click: pick('reopen') },
+  ]);
+  // On some platforms the close callback fires before the click handler.
+  menu.popup({ window: win, callback: () => setTimeout(() => { if (!done) resolve(null); }, 50) });
+}));
 
 ipcMain.handle('theme:native', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'));
 
@@ -363,6 +401,8 @@ function buildMenu() {
         },
         { type: 'separator' },
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: send('close-tab') },
+        { label: 'Close All Tabs', accelerator: 'CmdOrCtrl+Alt+W', click: send('close-all-tabs') },
+        { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: send('reopen-tab') },
         { label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W', role: 'close' },
         ...(isMac ? [] : [{ role: 'quit', label: 'Exit' }]),
       ],
@@ -429,8 +469,8 @@ function buildMenu() {
     },
     {
       label: 'Themes',
-      submenu: ['Paper', 'Night', 'Newsprint', 'Sepia'].map((t) => ({
-        label: t, click: send(`theme-${t.toLowerCase()}`),
+      submenu: THEMES.map(([id, label]) => ({
+        id: `theme-${id}`, label, type: 'radio', click: send(`theme-${id}`),
       })),
     },
     {

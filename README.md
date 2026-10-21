@@ -61,7 +61,7 @@ Agents can install, run and change Typewriter on their own. Point yours at this 
 - **Rich blocks**: KaTeX math (`$…$`, `$$…$$`), Mermaid diagrams, GFM tables and syntax-highlighted code fences. Click any of them to edit its source.
 - **Modes**: source code mode (⌘/), focus mode (F8), typewriter mode (F9)
 - **Sidebar**: live outline and a folder file tree (⇧⌘L)
-- **Themes**: Paper, Night, Newsprint, Sepia. Follows the system appearance until you pick one.
+- **Themes**: GitHub, Newsprint, Night, Pixyll, Whitey and Gothic (the looks of Typora's bundled themes, recreated from scratch), plus Paper and Sepia. Follows the system appearance until you pick one. Fonts are bundled, so themes look the same on every computer.
 - **Export**: standalone HTML and PDF. Math is exported as MathML and diagrams as inline SVG.
 - Word/character count and reading time, find & replace, drag-and-drop files and images, recent documents, unsaved-changes prompts
 
@@ -79,11 +79,15 @@ Every command is also in the menu bar. On Windows the menu bar is hidden until y
 | Save | ⌘S | Ctrl+S |
 | Save as | ⇧⌘S | Ctrl+Shift+S |
 | Close tab | ⌘W | Ctrl+W |
+| Close all tabs | ⌥⌘W | Ctrl+Alt+W |
+| Reopen closed tab | ⇧⌘T | Ctrl+Shift+T |
 | Close window | ⇧⌘W | Ctrl+Shift+W |
 | Next / previous tab | Ctrl+Tab / Ctrl+⇧Tab | Ctrl+Tab / Ctrl+Shift+Tab |
 | Export to HTML or PDF | File → Export | File → Export |
 
 You never have to save. Tabs, including unsaved drafts, are restored the next time you open the app.
+
+**Right-click a tab** for: Close, Close Others, Close Tabs to the Left, Close Tabs to the Right, Close Saved Tabs, Close All, Copy File Path, Reveal in Finder (Show in Explorer on Windows) and Reopen Closed Tab. **Drag tabs** to reorder them. Reopen Closed Tab also brings back text you closed with "Don't Save".
 
 ### Editing
 
@@ -138,7 +142,7 @@ Press **Enter** at the end of a list item to continue the list, or on an empty i
 | Zoom in / out | ⌘+ / ⌘− | Ctrl++ / Ctrl+− |
 | Actual size | View menu | View menu |
 | Full screen | ⌃⌘F | F11 |
-| Theme (Paper, Night, Newsprint, Sepia) | Themes menu | Themes menu |
+| Theme (GitHub, Newsprint, Night, Pixyll, Whitey, Gothic, Paper, Sepia) | Themes menu | Themes menu |
 
 ### Mouse
 
@@ -149,6 +153,8 @@ Press **Enter** at the end of a list item to continue the list, or on an empty i
 | ⌘-click (Mac) / Ctrl+click (Windows) a link | Opens it in your browser, or opens a linked `.md` file as a tab |
 | Double-click empty space in the tab bar | New tab |
 | Middle-click a tab | Close it |
+| Right-click a tab | Tab menu (close others/left/right/saved/all, copy path, reveal, reopen) |
+| Drag a tab | Reorder tabs |
 | Drag a `.md` file onto the window | Opens it in a tab |
 | Drag an image onto the document | Inserts it as an image link |
 | Move the pointer to the bottom of the window | Shows the word count and sidebar button |
@@ -169,7 +175,7 @@ The Markdown text is the single source of truth. Live preview is a CodeMirror 6 
 
 ### Adding a theme
 
-Add a `[data-theme="name"]` block of CSS variables to `src/styles/themes.css`, and add the name to the Themes menu in `electron/main.cjs` and the theme list in `src/main.js`.
+Add a `[data-theme="name"]` block of CSS variables to `src/styles/themes.css` (colours, fonts, sizes, heading style), then add it to `THEMES` in `electron/main.cjs` and `THEME_IDS` in `src/main.js`.
 
 ### Dev screenshots
 

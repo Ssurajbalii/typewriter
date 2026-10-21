@@ -1,4 +1,7 @@
-/* Themes are just variable sets. Add one by defining a new [data-theme]. */
+/* Themes are variable sets. Add one by defining a new [data-theme] and listing
+   it in THEMES (electron/main.cjs) and THEME_IDS (src/main.js).
+   The GitHub, Newsprint, Night, Pixyll, Whitey and Gothic themes recreate the
+   look of Typora's bundled themes from scratch; no Typora CSS is used. */
 
 :root,
 [data-theme="paper"] {
@@ -27,51 +30,78 @@
   --code-function: #8250df;
   --code-type: #953800;
   --code-property: #116329;
+
+  /* Typography and layout; themes override what they need. */
+  --font-size: 16px;
+  --line-height: 1.7;
+  --content-width: 860px;
+  --heading-weight: 700;
+  --heading-tracking: normal;
+  --h1-size: 2.1em;
+  --h1-align: left;
+  --h1-transform: none;
+  --h1-border: none;
+  --h2-size: 1.6em;
+  --h2-style: normal;
+  --h2-border: 1px solid var(--border);
+  --h3-size: 1.3em;
+  --quote-border: 4px solid var(--border);
 }
 
 [data-theme="night"] {
-  --bg: #1e1f22;
-  --chrome: #18191b;
-  --chrome-border: #2c2d31;
-  --text: #d7d7d4;
-  --muted: #8b8d93;
-  --heading: #f0f0ee;
-  --accent: #6ea8ff;
-  --quote: #a3a5aa;
-  --border: #3a3b40;
-  --code-bg: #26272b;
-  --highlight: #5c4e14;
-  --selection: #2f4a73;
-  --syntax-mark: #5d5f66;
-  --math: #c4a5ff;
-  --caret: #6ea8ff;
-  --code-keyword: #ff7b72;
+  --bg: #363b40;
+  --chrome: #2e3236;
+  --chrome-border: #464c53;
+  --text: #b8bfc6;
+  --muted: #8a929a;
+  --heading: #f4f4f4;
+  --accent: #82b1ff;
+  --quote: #9aa2aa;
+  --border: #4e555d;
+  --code-bg: #2f3337;
+  --highlight: #6a5a1c;
+  --selection: #4a5b70;
+  --syntax-mark: #6b737b;
+  --math: #c9a6ff;
+  --caret: #e6e6e6;
+  --code-keyword: #ff8a80;
   --code-string: #a5d6ff;
   --code-number: #79c0ff;
   --code-comment: #8b949e;
   --code-function: #d2a8ff;
-  --code-type: #ffa657;
+  --code-type: #ffb86c;
   --code-property: #7ee787;
+  --h2-border: 1px solid var(--chrome-border);
 }
 
 [data-theme="newsprint"] {
-  --bg: #f5f2ea;
-  --chrome: #ece8de;
-  --chrome-border: #dcd6c8;
-  --text: #2e2a24;
-  --muted: #8c8576;
-  --heading: #1b1915;
-  --accent: #8c3b1f;
-  --quote: #6b6355;
-  --border: #d4ccbb;
-  --code-bg: #ebe6d9;
-  --highlight: #f3df8f;
-  --selection: #e3d6b6;
-  --syntax-mark: #b8ae99;
-  --math: #6b3fa0;
-  --caret: #8c3b1f;
-  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --font-heading: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --bg: #f3f2ee;
+  --chrome: #eae8e2;
+  --chrome-border: #d8d4ca;
+  --text: #1f0909;
+  --muted: #7d766c;
+  --heading: #1f0909;
+  --accent: #065588;
+  --quote: #5b524a;
+  --border: #cfc8bb;
+  --code-bg: #e9e6de;
+  --highlight: #f1df8a;
+  --selection: #dcd3bd;
+  --syntax-mark: #b0a796;
+  --math: #5e3a8c;
+  --caret: #065588;
+  --font-body: "PT Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-heading: "PT Serif", Georgia, serif;
+  --font-size: 17px;
+  --line-height: 1.6;
+  --content-width: 760px;
+  --h1-size: 2.2em;
+  --h1-transform: uppercase;
+  --heading-tracking: 0.01em;
+  --h1-border: 3px double var(--text);
+  --h2-size: 1.5em;
+  --h2-border: none;
+  --quote-border: 3px solid var(--border);
 }
 
 [data-theme="sepia"] {
@@ -92,4 +122,115 @@
   --caret: #a0522d;
   --font-body: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
   --font-heading: var(--font-body);
+}
+
+[data-theme="github"] {
+  --bg: #ffffff;
+  --chrome: #f6f8fa;
+  --chrome-border: #e1e4e8;
+  --text: #333333;
+  --muted: #777777;
+  --heading: #333333;
+  --accent: #4183c4;
+  --quote: #777777;
+  --border: #dfe2e5;
+  --code-bg: #f3f4f4;
+  --highlight: #fff5b1;
+  --selection: #b3d4fc;
+  --syntax-mark: #bbbbbb;
+  --math: #6f42c1;
+  --caret: #333333;
+  --line-height: 1.6;
+  --h1-size: 2.25em;
+  --h1-border: 1px solid #eeeeee;
+  --h2-size: 1.75em;
+  --h2-border: 1px solid #eeeeee;
+  --h3-size: 1.5em;
+  --quote-border: 4px solid #dfe2e5;
+}
+
+[data-theme="pixyll"] {
+  --bg: #ffffff;
+  --chrome: #f7f7f7;
+  --chrome-border: #e8e8e8;
+  --text: #333333;
+  --muted: #999999;
+  --heading: #222222;
+  --accent: #2a7ae2;
+  --quote: #666666;
+  --border: #dddddd;
+  --code-bg: #f6f6f6;
+  --highlight: #fff3a3;
+  --selection: #cfe0f7;
+  --syntax-mark: #bdbdbd;
+  --math: #7a4fbf;
+  --caret: #2a7ae2;
+  --font-body: Merriweather, Georgia, serif;
+  --font-heading: Lato, "Helvetica Neue", Arial, sans-serif;
+  --font-size: 17px;
+  --line-height: 1.8;
+  --content-width: 780px;
+  --h1-size: 2.75em;
+  --h2-size: 2em;
+  --h2-border: none;
+  --h3-size: 1.5em;
+  --quote-border: 4px solid #dddddd;
+}
+
+[data-theme="whitey"] {
+  --bg: #ffffff;
+  --chrome: #fafafa;
+  --chrome-border: #ececec;
+  --text: #2a2a2a;
+  --muted: #9a9a9a;
+  --heading: #111111;
+  --accent: #1d6fa5;
+  --quote: #6e6e6e;
+  --border: #e2e2e2;
+  --code-bg: #f6f6f4;
+  --highlight: #fbefb0;
+  --selection: #d6e6f5;
+  --syntax-mark: #c4c4c4;
+  --math: #6d4a9e;
+  --caret: #111111;
+  --font-body: Vollkorn, "Iowan Old Style", Palatino, Georgia, serif;
+  --font-heading: Vollkorn, Georgia, serif;
+  --font-size: 19px;
+  --line-height: 1.65;
+  --content-width: 700px;
+  --heading-weight: 500;
+  --h1-size: 2.6em;
+  --h1-align: center;
+  --h2-size: 1.7em;
+  --h2-style: italic;
+  --h2-border: none;
+  --h3-size: 1.35em;
+  --quote-border: 2px solid #cccccc;
+}
+
+[data-theme="gothic"] {
+  --bg: #fdfdfd;
+  --chrome: #f4f4f4;
+  --chrome-border: #e4e4e4;
+  --text: #444444;
+  --muted: #9b9b9b;
+  --heading: #222222;
+  --accent: #c0392b;
+  --quote: #777777;
+  --border: #dddddd;
+  --code-bg: #f3f3f3;
+  --highlight: #fde9a8;
+  --selection: #f3d2cd;
+  --syntax-mark: #c2c2c2;
+  --math: #8e44ad;
+  --caret: #c0392b;
+  --font-body: "Avenir Next", Avenir, "Century Gothic", Futura, "Trebuchet MS", sans-serif;
+  --font-heading: var(--font-body);
+  --heading-weight: 600;
+  --heading-tracking: 0.04em;
+  --h1-size: 2em;
+  --h1-transform: uppercase;
+  --h2-size: 1.45em;
+  --h3-size: 1.2em;
+  --quote-border: 3px solid #c0392b;
 }

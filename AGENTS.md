@@ -72,13 +72,13 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 | App controller | `src/main.js` | Wires menus, modes, themes, tabs, save/open, drag-and-drop |
 | Tabs & session | `src/tabs.js` | One `EditorState` per tab (own undo history); pure `serializeSession` / `planRestore` are unit-tested |
 | Sidebar / export | `src/ui/sidebar.js`, `src/export.js` | Outline and file tree; standalone HTML (MathML math, inline SVG diagrams) |
-| Styles | `src/styles/` | `themes.css` holds variables only; `editor.css` styles the editor; `app.css` styles the chrome |
+| Styles | `src/styles/` | `themes.css` holds variables only (colours, fonts, font size, line height, column width, heading style); `editor.css` styles the editor from them; `app.css` styles the chrome |
 
 ### How to add things
 
 - **Menu command:** add a menu item in `electron/main.cjs` that calls `send('my-action')`, then handle `'my-action'` in the `actions` map in `src/main.js`.
 - **Rendered element:** handle its syntax node in `buildDecorations` (`livePreview.js`). Render only when `touches(...)` / `touchesLines(...)` is false, and return `false` to skip children you replaced. Multi-line replacements must use `blockReplace` (block widgets are only legal from a `StateField`).
-- **Theme:** add a `[data-theme="name"]` variable block to `themes.css`, then add it to the Themes menu (`main.cjs`) and the theme list in `src/main.js`. Add dark themes to `DARK_THEMES`.
+- **Theme:** add a `[data-theme="name"]` variable block to `themes.css`, then add it to `THEMES` (`main.cjs`, which builds the radio menu) and `THEME_IDS` (`src/main.js`). Add dark themes to `DARK_THEMES`. Bundle any new font with `@fontsource` (Latin subset imports only) so it looks the same everywhere. Themes inspired by Typora must be written from scratch.
 
 ## Rules and gotchas
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EditorState, Text } from '@codemirror/state';
-import { nextUntitledName, isDirty, serializeSession, planRestore } from '../src/tabs.js';
+import { nextUntitledName, isDirty, serializeSession, planRestore, tabsToClose } from '../src/tabs.js';
 
 const tab = (o) => ({ scrollTop: 0, saved: null, ...o, state: EditorState.create({ doc: o.text ?? '' }) });
 
@@ -61,4 +61,17 @@ test('an untitled tab saved clean comes back clean', () => {
 test('unknown session versions restore nothing', () => {
   assert.deepEqual(planRestore({ version: 99, tabs: [] }, {}), []);
   assert.deepEqual(planRestore(null, {}), []);
+});
+
+test('bulk close picks the right tabs, in tab-bar order', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  const dirty = (id) => id === 'b' || id === 'd';
+  assert.deepEqual(tabsToClose(ids, 'c', 'others'), ['a', 'b', 'd']);
+  assert.deepEqual(tabsToClose(ids, 'c', 'left'), ['a', 'b']);
+  assert.deepEqual(tabsToClose(ids, 'c', 'right'), ['d']);
+  assert.deepEqual(tabsToClose(ids, 'a', 'left'), []);
+  assert.deepEqual(tabsToClose(ids, 'd', 'right'), []);
+  assert.deepEqual(tabsToClose(ids, 'c', 'all'), ids);
+  assert.deepEqual(tabsToClose(ids, 'c', 'saved', dirty), ['a', 'c']);
+  assert.deepEqual(tabsToClose(ids, 'zz', 'left'), []);
 });

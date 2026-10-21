@@ -1,4 +1,16 @@
 import 'katex/dist/katex.min.css';
+// Bundled (OFL) fonts for the Newsprint, Pixyll and Whitey themes, Latin subset only.
+import '@fontsource/pt-serif/latin-400.css';
+import '@fontsource/pt-serif/latin-400-italic.css';
+import '@fontsource/pt-serif/latin-700.css';
+import '@fontsource/merriweather/latin-400.css';
+import '@fontsource/merriweather/latin-400-italic.css';
+import '@fontsource/merriweather/latin-700.css';
+import '@fontsource/lato/latin-400.css';
+import '@fontsource/lato/latin-700.css';
+import '@fontsource/vollkorn/latin-400.css';
+import '@fontsource/vollkorn/latin-400-italic.css';
+import '@fontsource/vollkorn/latin-500.css';
 import './styles/themes.css';
 import './styles/app.css';
 import './styles/editor.css';
@@ -10,7 +22,7 @@ import { Sidebar } from './ui/sidebar.js';
 import { renderExportHtml } from './export.js';
 import { openSearchPanel } from '@codemirror/search';
 import { dirname, isAbsolute, join, relativeTo } from './paths.js';
-import { Tabs, planRestore } from './tabs.js';
+import { Tabs, planRestore, tabsToClose } from './tabs.js';
 import welcome from './welcome.md?raw';
 
 const api = window.typewriter;
@@ -119,10 +131,69 @@ function renderTabs() {
 
     el.addEventListener('mousedown', (e) => { if (e.button === 0) tabs.activate(tab.id); });
     el.addEventListener('auxclick', (e) => { if (e.button === 1) closeTab(tab.id); });
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); showTabMenu(tab.id); });
+
+    // Drag to reorder.
+    el.draggable = true;
+    el.dataset.id = tab.id;
+    el.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('application/x-typewriter-tab', tab.id);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
     el.append(title, close);
     return el;
   }));
   bar.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function dropIndex(clientX) {
+  const els = [...$('#tabs').querySelectorAll('.tab')];
+  const i = els.findIndex((el) => {
+    const r = el.getBoundingClientRect();
+    return clientX < r.left + r.width / 2;
+  });
+  return i < 0 ? els.length : i;
+}
+$('#tabs').addEventListener('dragover', (e) => {
+  if (!e.dataTransfer.types.includes('application/x-typewriter-tab')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+});
+$('#tabs').addEventListener('drop', (e) => {
+  const id = e.dataTransfer.getData('application/x-typewriter-tab');
+  if (!id) return;
+  e.preventDefault();
+  const from = tabs.tabs.findIndex((t) => t.id === id);
+  let to = dropIndex(e.clientX);
+  if (to > from) to--; // removing the tab first shifts later positions left
+  tabs.move(id, to);
+  scheduleSessionSave();
+});
+
+async function showTabMenu(id) {
+  const index = tabs.tabs.findIndex((t) => t.id === id);
+  const tab = tabs.tabs[index];
+  const action = await api.tabMenu({
+    path: tab.path,
+    index,
+    count: tabs.tabs.length,
+    hasSaved: tabs.tabs.some((t) => !tabs.dirty(t)),
+    canReopen: tabs.closed.length > 0,
+  });
+  if (action === 'close') closeTab(id);
+  else if (action === 'reopen') reopenTab();
+  else if (action) closeTabs(tabsToClose(tabs.tabs.map((t) => t.id), id, action, (tid) => tabs.dirty(tabs.tabs.find((t) => t.id === tid))));
+}
+
+/** Close several tabs; stops if the user cancels a save prompt. */
+async function closeTabs(ids) {
+  for (const id of ids) if (!(await closeTab(id))) break;
+}
+
+function reopenTab() {
+  if (tabs.reopenClosed()) scheduleSessionSave();
 }
 
 // Double-clicking empty space in the tab bar opens a new tab, as in Notepad++.
@@ -134,17 +205,19 @@ function newTab() {
   scheduleSessionSave();
 }
 
+/** Close one tab, asking to save it if it has unsaved changes. Returns false if cancelled. */
 async function closeTab(id) {
   const tab = tabs.tabs.find((t) => t.id === id);
-  if (!tab) return;
+  if (!tab) return true;
   if (tabs.dirty(tab)) {
     tabs.activate(id);
     const choice = await api.confirmCloseTab(tabs.title(tab));
-    if (choice === 'cancel') return;
-    if (choice === 'save' && !(await save(false))) return;
+    if (choice === 'cancel') return false;
+    if (choice === 'save' && !(await save(false))) return false;
   }
   tabs.remove(id);
   scheduleSessionSave();
+  return true;
 }
 
 // ---- Title & status bar -------------------------------------------------
@@ -206,7 +279,7 @@ function openFileTab({ filePath, content }) {
   const current = tabs.active;
   const blank = current && !current.path && view.state.doc.length === 0 && tabs.tabs.length === 1;
   tabs.add({ path: filePath, content, saved: content });
-  if (blank) tabs.remove(current.id);
+  if (blank) tabs.remove(current.id, { remember: false });
   scheduleSessionSave();
 }
 
@@ -290,7 +363,7 @@ function applyTheme(theme = localStorage.getItem('tw.theme')) {
   view.dispatch({ selection: view.state.selection });
   // Windows draws its caption buttons natively; keep them on the theme's colours.
   const cs = getComputedStyle(document.documentElement);
-  api.themeChanged({ bg: cs.getPropertyValue('--bg').trim(), fg: cs.getPropertyValue('--text').trim() });
+  api.themeChanged({ bg: cs.getPropertyValue('--bg').trim(), fg: cs.getPropertyValue('--text').trim(), name: effective });
 }
 
 systemDark.addEventListener('change', () => applyTheme());
@@ -309,6 +382,8 @@ const actions = {
   'save-as': () => save(true),
   'new-tab': () => newTab(),
   'close-tab': () => closeTab(tabs.activeId),
+  'close-all-tabs': () => closeTabs(tabs.tabs.map((t) => t.id)),
+  'reopen-tab': () => reopenTab(),
   'next-tab': () => tabs.cycle(1),
   'prev-tab': () => tabs.cycle(-1),
   'open-folder': () => sidebar.chooseFolder(),
@@ -342,7 +417,9 @@ const actions = {
   'toggle-typewriter': () => toggleMode('typewriter'),
 };
 for (let n = 0; n <= 6; n++) actions[`heading-${n}`] = () => setHeading(view, n);
-for (const t of ['paper', 'night', 'newsprint', 'sepia']) {
+// Must match THEMES in electron/main.cjs and [data-theme] blocks in themes.css.
+const THEME_IDS = ['paper', 'github', 'newsprint', 'night', 'pixyll', 'whitey', 'gothic', 'sepia'];
+for (const t of THEME_IDS) {
   actions[`theme-${t}`] = () => { localStorage.setItem('tw.theme', t); applyTheme(t); };
 }
 

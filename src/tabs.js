@@ -75,6 +75,24 @@ export function planRestore(session, diskContents) {
   return out;
 }
 
+/**
+ * Tabs affected by a bulk close from the tab menu, in tab-bar order.
+ * mode: 'others' | 'left' | 'right' | 'all' | 'saved'
+ */
+export function tabsToClose(ids, targetId, mode, isDirty = () => false) {
+  const i = ids.indexOf(targetId);
+  switch (mode) {
+    case 'others': return ids.filter((id) => id !== targetId);
+    case 'left': return i < 0 ? [] : ids.slice(0, i);
+    case 'right': return i < 0 ? [] : ids.slice(i + 1);
+    case 'all': return [...ids];
+    case 'saved': return ids.filter((id) => !isDirty(id));
+    default: return [];
+  }
+}
+
+const MAX_CLOSED = 20;
+
 let nextId = 1;
 const newId = () => `t${Date.now().toString(36)}${(nextId++).toString(36)}`;
 
@@ -91,6 +109,7 @@ export class Tabs {
     Object.assign(this, { view, makeState, showState, onSwitch, onListChange });
     this.tabs = [];
     this.activeId = null;
+    this.closed = []; // most recent last; reopened with Reopen Closed Tab
   }
 
   get active() { return this.tabs.find((t) => t.id === this.activeId); }
@@ -141,10 +160,11 @@ export class Tabs {
   }
 
   /** Remove a tab without asking. Keeps at least one (empty) tab open. */
-  remove(id) {
+  remove(id, { remember = true } = {}) {
     const i = this.tabs.findIndex((t) => t.id === id);
     if (i < 0) return;
     const wasActive = id === this.activeId;
+    if (remember) this.rememberClosed(this.tabs[i]);
     this.tabs.splice(i, 1);
     if (!this.tabs.length) {
       this.activeId = null;
@@ -155,6 +175,39 @@ export class Tabs {
       this.activeId = null;
       this.activate(this.tabs[Math.min(i, this.tabs.length - 1)].id);
     }
+    this.onListChange();
+  }
+
+  rememberClosed(tab) {
+    const state = tab.id === this.activeId ? this.view.state : tab.state;
+    if (!tab.path && state.doc.length === 0) return; // nothing worth reopening
+    const sel = state.selection.main;
+    this.closed.push({
+      path: tab.path,
+      name: tab.name,
+      content: state.doc.toString(), // includes edits discarded with "Don't Save"
+      saved: tab.saved ? tab.saved.toString() : null,
+      selection: { anchor: sel.anchor, head: sel.head },
+    });
+    if (this.closed.length > MAX_CLOSED) this.closed.shift();
+  }
+
+  /** Reopen the most recently closed tab. Returns false if there is none. */
+  reopenClosed() {
+    const rec = this.closed.pop();
+    if (!rec) return false;
+    const open = rec.path && this.findByPath(rec.path);
+    if (open) this.activate(open.id);
+    else this.add(rec);
+    return true;
+  }
+
+  /** Move a tab to a new position in the tab bar. */
+  move(id, toIndex) {
+    const from = this.tabs.findIndex((t) => t.id === id);
+    if (from < 0) return;
+    const [tab] = this.tabs.splice(from, 1);
+    this.tabs.splice(Math.max(0, Math.min(toIndex, this.tabs.length)), 0, tab);
     this.onListChange();
   }
 

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('typewriter', {
   readFile: (p) => ipcRenderer.invoke('file:read', p),
   setActiveTab: (info) => ipcRenderer.send('tab:active', info),
   confirmCloseTab: (name) => ipcRenderer.invoke('tab:confirm-close', name),
+  tabMenu: (info) => ipcRenderer.invoke('tab:menu', info),
   loadSession: () => ipcRenderer.invoke('session:load'),
   saveSession: (session) => ipcRenderer.invoke('session:save', session),
   saveSessionSync: (session) => ipcRenderer.sendSync('session:save-sync', session),

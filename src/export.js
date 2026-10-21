@@ -76,7 +76,10 @@ function createMarked({ absoluteImages }) {
 }
 
 const THEME_VARS = ['--bg', '--text', '--muted', '--heading', '--accent', '--quote', '--border',
-  '--code-bg', '--highlight', '--font-body', '--font-heading', '--font-mono'];
+  '--code-bg', '--highlight', '--font-body', '--font-heading', '--font-mono',
+  '--font-size', '--line-height', '--content-width', '--heading-weight', '--heading-tracking',
+  '--h1-size', '--h1-align', '--h1-transform', '--h1-border', '--h2-size', '--h2-style', '--h2-border',
+  '--h3-size', '--quote-border'];
 
 function themeCss() {
   const cs = getComputedStyle(document.documentElement);
@@ -85,11 +88,12 @@ function themeCss() {
 
 const EXPORT_CSS = `
 html{background:var(--bg);color:var(--text)}
-body{font-family:var(--font-body);font-size:16px;line-height:1.7;max-width:820px;margin:0 auto;padding:48px 32px}
-h1,h2,h3,h4,h5,h6{font-family:var(--font-heading);color:var(--heading);line-height:1.3;margin:1.6em 0 .6em}
-h1{font-size:2.1em}h2{font-size:1.6em;border-bottom:1px solid var(--border);padding-bottom:.25em}h3{font-size:1.3em}
+body{font-family:var(--font-body);font-size:var(--font-size);line-height:var(--line-height);max-width:var(--content-width);margin:0 auto;padding:48px 32px}
+h1,h2,h3,h4,h5,h6{font-family:var(--font-heading);color:var(--heading);font-weight:var(--heading-weight);letter-spacing:var(--heading-tracking);line-height:1.3;margin:1.6em 0 .6em}
+h1{font-size:var(--h1-size);text-align:var(--h1-align);text-transform:var(--h1-transform);border-bottom:var(--h1-border);padding-bottom:.2em}
+h2{font-size:var(--h2-size);font-style:var(--h2-style);border-bottom:var(--h2-border);padding-bottom:.25em}h3{font-size:var(--h3-size)}
 a{color:var(--accent)}img{max-width:100%}
-blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid var(--border);color:var(--quote)}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:var(--quote-border);color:var(--quote)}
 code{font-family:var(--font-mono);font-size:.88em;background:var(--code-bg);padding:.15em .35em;border-radius:4px}
 pre{background:var(--code-bg);padding:14px 16px;border-radius:6px;overflow:auto}pre code{background:none;padding:0}
 table{border-collapse:collapse;margin:1em 0}th,td{border:1px solid var(--border);padding:6px 12px}th{background:var(--code-bg)}
