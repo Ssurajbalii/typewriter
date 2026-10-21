@@ -97,13 +97,23 @@ function createWindow(filePath = null) {
         await new Promise((r) => setTimeout(r, 300));
       }
       for (const ch of process.env.TW_CAPTURE_TYPE ?? '') {
-        win.webContents.sendInputEvent({ type: 'char', keyCode: ch });
+        if (ch === '\n') { // a newline in the text presses Enter
+          for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: 'Enter' });
+        } else {
+          win.webContents.sendInputEvent({ type: 'char', keyCode: ch });
+        }
+        await new Promise((r) => setTimeout(r, 15));
       }
       // TW_CAPTURE_KEYS="meta+Down,Up" presses keys (modifiers joined with +).
       for (const combo of (process.env.TW_CAPTURE_KEYS ?? '').split(',').filter(Boolean)) {
         const parts = combo.split('+');
         const keyCode = parts.pop();
         for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode, modifiers: parts });
+      }
+      // TW_CAPTURE_JS_AFTER runs after all input, just before the capture.
+      if (process.env.TW_CAPTURE_JS_AFTER) {
+        await new Promise((r) => setTimeout(r, 200));
+        await win.webContents.executeJavaScript(process.env.TW_CAPTURE_JS_AFTER);
       }
       // TW_CAPTURE_SETTLE_MS: wait before capturing (default 800).
       await new Promise((r) => setTimeout(r, Number(process.env.TW_CAPTURE_SETTLE_MS ?? 800)));

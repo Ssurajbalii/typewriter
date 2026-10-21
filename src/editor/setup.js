@@ -1,4 +1,4 @@
-import { EditorState, Compartment } from '@codemirror/state';
+import { EditorState, Compartment, Prec } from '@codemirror/state';
 import { EditorView, keymap, dropCursor, highlightSpecialChars } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { search, searchKeymap } from '@codemirror/search';
@@ -6,6 +6,7 @@ import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { indentOnInput } from '@codemirror/language';
 import { markdownSupport, markdownHighlighting } from './syntax.js';
 import { livePreview, focusMode, typewriterMode } from './livePreview.js';
+import { enterKeymap } from './enter.js';
 
 export const modes = {
   preview: new Compartment(),
@@ -45,6 +46,8 @@ export function createEditor(parent, { doc = '', onChange, onSelection }) {
     search({ top: true }),
     EditorView.lineWrapping,
     markdownSupport(),
+    // Above the Markdown keymap (Prec.high), which still handles Enter in lists and quotes.
+    Prec.highest(keymap.of(enterKeymap)),
     markdownHighlighting,
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on', autocapitalize: 'on' }),

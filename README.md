@@ -99,6 +99,8 @@ You never have to save. Tabs, including unsaved drafts, are restored the next ti
 | Select all | ⌘A | Ctrl+A |
 | Find | ⌘F | Ctrl+F |
 | Find and replace | ⌥⌘F | Ctrl+Alt+F |
+| New paragraph | Enter | Enter |
+| Line break inside a paragraph | ⇧Enter | Shift+Enter |
 | Indent / outdent | Tab / ⇧Tab | Tab / Shift+Tab |
 
 ### Formatting
@@ -128,7 +130,7 @@ You never have to save. Tabs, including unsaved drafts, are restored the next ti
 | Table | ⌥⌘T | Ctrl+Alt+T | `\| a \| b \|` |
 | Horizontal rule | Paragraph menu | Paragraph menu | `---` |
 
-Press **Enter** at the end of a list item to continue the list, or on an empty item to end it.
+Press **Enter** at the end of a list item to continue the list, or on an empty item to end it. As in Typora, Enter after a paragraph or heading starts a new paragraph, so you can type `-` straight away to begin a list.
 
 ### View
 

@@ -50,7 +50,8 @@ Optional variables, applied in this order:
 | `TW_CAPTURE_ACTIONS` | `theme-night,toggle-focus` | Menu actions (any key of `actions` in `src/main.js`) |
 | `TW_CAPTURE_JS` | `document.querySelector('.cm-scroller').scrollTop=800` | JS run in the renderer |
 | `TW_CAPTURE_CLICK` | `450,300` | Left click at CSS pixel coordinates |
-| `TW_CAPTURE_TYPE` | `hello` | Types characters |
+| `TW_CAPTURE_TYPE` | `hello` | Types characters; a newline presses Enter (use `$'line one\nline two'` in bash) |
+| `TW_CAPTURE_JS_AFTER` | `console.log(document.title)` | JS run after all input, just before capturing |
 | `TW_CAPTURE_KEYS` | `meta+Up,Down` | Key presses, modifiers joined with `+` (use `control` on Windows) |
 | `TW_CAPTURE_HOLD_MS` | `6000` | Keep the window open after capturing, e.g. for an OS-level screenshot |
 | `TW_CAPTURE_SETTLE_MS` | `50` | Wait before capturing (default 800); short values test quitting right after typing |
@@ -70,6 +71,7 @@ The Markdown text is the single source of truth. Live preview is only a decorati
 | Live preview | `src/editor/livePreview.js` | A `StateField` that hides syntax and inserts widgets wherever the selection is *not*. Also focus and typewriter modes. |
 | Widgets | `src/editor/widgets.js` | Rendered stand-ins: math, tables, images, Mermaid, checkboxes, bullets |
 | Commands | `src/editor/commands.js` | Formatting commands that edit the Markdown text directly |
+| Enter key | `src/editor/enter.js` | Enter starts a new paragraph (blank line) and ends lists cleanly, avoiding setext headings and lazy continuation; unit-tested |
 | Editor setup | `src/editor/setup.js` | Extensions and compartments (`preview`, `focus`, `typewriter`) |
 | App controller | `src/main.js` | Wires menus, modes, themes, tabs, save/open, drag-and-drop |
 | Tabs & session | `src/tabs.js` | One `EditorState` per tab (own undo history); pure `serializeSession` / `planRestore` are unit-tested |
