@@ -53,6 +53,8 @@ Optional variables, applied in this order:
 | `TW_CAPTURE_TYPE` | `hello` | Types characters |
 | `TW_CAPTURE_KEYS` | `meta+Up,Down` | Key presses, modifiers joined with `+` (use `control` on Windows) |
 | `TW_CAPTURE_HOLD_MS` | `6000` | Keep the window open after capturing, e.g. for an OS-level screenshot |
+| `TW_CAPTURE_SETTLE_MS` | `50` | Wait before capturing (default 800); short values test quitting right after typing |
+| `TW_CAPTURE_QUIT` | `graceful` | Quit like ⌘Q, so window-close handlers (the session save) run, instead of exiting abruptly |
 
 Capture runs use a throwaway profile in the OS temp directory, so they never change the user's settings. Renderer console output is printed as `[renderer:<level>]`. Screenshots are at 2× scale, so divide image pixels by 2 to get click coordinates.
 

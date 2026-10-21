@@ -105,12 +105,15 @@ function createWindow(filePath = null) {
         const keyCode = parts.pop();
         for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode, modifiers: parts });
       }
-      await new Promise((r) => setTimeout(r, 800));
+      // TW_CAPTURE_SETTLE_MS: wait before capturing (default 800).
+      await new Promise((r) => setTimeout(r, Number(process.env.TW_CAPTURE_SETTLE_MS ?? 800)));
       const image = await win.webContents.capturePage();
       await fs.writeFile(process.env.TW_CAPTURE, image.toPNG());
       // TW_CAPTURE_HOLD_MS keeps the window open afterwards, e.g. for an OS-level screenshot.
       await new Promise((r) => setTimeout(r, Number(process.env.TW_CAPTURE_HOLD_MS) || 0));
-      app.exit(0);
+      // TW_CAPTURE_QUIT=graceful quits like ⌘Q (window close events run) instead of exiting abruptly.
+      if (process.env.TW_CAPTURE_QUIT === 'graceful') app.quit();
+      else app.exit(0);
     }, 2500));
   }
   // The renderer queues opened files until its saved session is restored.
